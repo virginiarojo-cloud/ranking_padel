@@ -192,7 +192,7 @@
             <div class="glass-card overflow-hidden">
                 <div class="bg-slate-800/80 p-4 border-b border-slate-700 flex justify-between items-center">
                     <h3 class="font-bold text-lg"><i class="fas fa-trophy text-cyan-400 mr-2"></i> Clasificación</h3>
-                    <button onclick="document.getElementById('modal-baremo').classList.add('hidden')" class="bg-slate-700 p-2 rounded-full text-slate-300 hover:text-white transition">
+                    <button onclick="document.getElementById('modal-baremo').classList.remove('hidden')" class="bg-slate-700 p-2 rounded-full text-slate-300 hover:text-white transition">
                         <i class="fas fa-info-circle"></i>
                     </button>
                 </div>
@@ -415,7 +415,7 @@
 
     <script>
         const SHEET_ID = '1dazI73BA8aUMa_RNFH_Ovh_ZJsDMu1i71we47xF0xHU'; 
-        const URL_GOOGLE_SCRIPT = ''; 
+        const URL_GOOGLE_SCRIPT = 'https://script.google.com/macros/s/AKfycbzzSaNcFcsncz2hIMNpsv2YwHq1FwSpN4YcDAF4yR5G4aorwC1pgkYZ6X58vhzMT8Cerg/exec'; 
 
         const state = {
             miGrupo: '',
@@ -665,6 +665,41 @@
                         }
                     }
                 }).catch(() => {});
+
+            const urlPartidos = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Partidos&tqx=out:json`;
+            fetch(urlPartidos)
+                .then(r => r.text())
+                .then(text => {
+                    const startIdx = text.indexOf('{');
+                    const endIdx = text.lastIndexOf('}');
+                    if (startIdx !== -1 && endIdx !== -1) {
+                        const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+                        if (json && json.table && json.table.rows) {
+                            const partDrive = [];
+                            json.table.rows.forEach(r => {
+                                if (r.c && r.c[3] && r.c[4] && r.c[5]) {
+                                    const grupo = r.c[2] && r.c[2].v ? r.c[2].v.toString().trim() : '';
+                                    const pareja1 = r.c[3].v ? r.c[3].v.toString().trim() : '';
+                                    const pareja2 = r.c[4].v ? r.c[4].v.toString().trim() : '';
+                                    const resultadoSets = r.c[5].v ? r.c[5].v.toString().trim() : '';
+                                    const ganador = r.c[6] && r.c[6].v ? r.c[6].v.toString().trim() : '';
+                                    if (pareja1 && pareja2 && !pareja1.toLowerCase().includes('pareja')) {
+                                        partDrive.push({ grupo, pareja1, pareja2, resultadoSets, ganador });
+                                    }
+                                }
+                            });
+                            if (partDrive.length > 0) {
+                                cache.partidos = partDrive;
+                                localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
+                                if (state.miPareja) {
+                                    recalcularTodaLaClasificacion();
+                                    renderClasificacion();
+                                    renderPartidosRegistrados();
+                                }
+                            }
+                        }
+                    }
+                }).catch(() => {});
         }
 
         function procesarDatosDrive(json) {
@@ -756,7 +791,6 @@
                 const parejasGrupo = cache.parejas.filter(p => p.grupo === state.miGrupo);
                 cache.clasificacion = parejasGrupo.map(p => ({ pareja: p.nombre, pts: 0, jg: 0, jp: 0, dif: 0 }));
             }
-            // Inyectar una pareja de prueba si hay pocas para asegurar visualización de matches
             const rivalesGrupo = cache.parejas.filter(p => normalizarTexto(p.grupo) === normalizarTexto(state.miGrupo) && normalizarTexto(p.nombre) !== normalizarTexto(state.miPareja));
             if (rivalesGrupo.length > 0 && cache.disponibilidades.length === 0) {
                 const hoyStr = new Date().toISOString().split('T')[0];
@@ -875,7 +909,6 @@
             dispsGrupo.forEach(d => {
                 const fItem = normalizarFecha(d.fecha);
                 const frItem = normalizarFranja(d.franja);
-                const rivalParejaNorm = normalizarTexto(d.pareja);
                 const esCerrado = cache.cerrados.some(c => normalizarTexto(c) === normalizarTexto(d.pareja));
 
                 const esMatch = misDisps.some(md => normalizarFecha(md.fecha) === fItem && normalizarFranja(md.franja) === frItem);
@@ -958,6 +991,7 @@
                 cache.chats[rival] = [{ emisor: "Sistema", mensaje: "¡Match confirmado! Partido marcado en verde.", hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }];
                 localStorage.setItem('chats', JSON.stringify(cache.chats));
             }
+            renderDisponibilidades();
             renderPendientes();
             renderListaChats();
         }
@@ -1015,6 +1049,19 @@
             input.value = '';
             renderMensajesChat();
             renderListaChats();
+
+            if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({
+                        accion: 'guardarChat',
+                        grupo: state.miGrupo,
+                        emisor: state.miPareja,
+                        receptor: chatActivoRival,
+                        mensaje: txt
+                    })
+                }).catch(e => console.log(e));
+            }
         }
 
         function renderListaChats() {
@@ -1139,6 +1186,13 @@
             cerrarModalResultado();
             renderPartidosRegistrados();
             renderClasificacion();
+
+            if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ accion: 'guardarResultado', ...partidoObj })
+                }).catch(e => console.log(e));
+            }
         }
 
         function actualizarRankingLocal(p) {
@@ -1267,12 +1321,43 @@
                 localStorage.removeItem('chats');
                 localStorage.removeItem('cerrados');
                 renderizarTodo();
+
+                if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                    fetch(URL_GOOGLE_SCRIPT, {
+                        method: 'POST', mode: 'no-cors',
+                        body: JSON.stringify({ accion: 'vaciarChatsYDisponibilidades' })
+                    }).catch(e => console.log(e));
+                }
                 alert("Limpieza completada.");
             }
         }
 
         function iniciarSiguienteRonda() {
+            const fIni = document.getElementById('admin-ronda-inicio').value;
+            const fFin = document.getElementById('admin-ronda-fin').value;
+
+            const asignaciones = [];
+            cache.parejas.forEach((p, idx) => {
+                const el = document.getElementById(`select-grupo-pareja-${idx}`);
+                if (el) {
+                    const nuevoGrupo = el.value;
+                    p.grupo = nuevoGrupo;
+                    asignaciones.push({ nombre: p.nombre, nuevoGrupo: nuevoGrupo });
+                }
+            });
+
             if (confirm("¿Deseas iniciar la siguiente ronda?")) {
+                if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                    fetch(URL_GOOGLE_SCRIPT, {
+                        method: 'POST', mode: 'no-cors',
+                        body: JSON.stringify({
+                            accion: 'cambiarRonda',
+                            fechaInicio: fIni,
+                            fechaFin: fFin,
+                            asignaciones: asignaciones
+                        })
+                    }).catch(e => console.log(e));
+                }
                 localStorage.clear();
                 location.reload();
             }
