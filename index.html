@@ -647,32 +647,40 @@
                                     const fecha = normalizarFecha(fechaRaw);
                                     const franja = r.c[4].v ? r.c[4].v.toString().trim() : '';
                                     if (pareja && fecha && !pareja.toLowerCase().includes('pareja')) {
-                                        dispDrive.push({ pareja, grupo, fecha, franja });
+                                        // Evitar duplicados en la misma lectura de Drive
+                                        const yaEnDrive = dispDrive.some(d =>
+                                            normalizarTexto(d.pareja) === normalizarTexto(pareja) &&
+                                            normalizarFecha(d.fecha) === fecha &&
+                                            normalizarFranja(d.franja) === normalizarFranja(franja)
+                                        );
+                                        if (!yaEnDrive) {
+                                            dispDrive.push({ pareja, grupo, fecha, franja });
+                                        }
                                     }
                                 }
                             });
-                            if (dispDrive.length > 0) {
-                                const combinadas = [...dispDrive];
-                                cache.disponibilidades.forEach(localD => {
-                                    const existe = combinadas.some(d => 
-                                        normalizarTexto(d.pareja) === normalizarTexto(localD.pareja) &&
-                                        normalizarFecha(d.fecha) === normalizarFecha(localD.fecha) &&
-                                        normalizarFranja(d.franja) === normalizarFranja(localD.franja)
-                                    );
-                                    if (!existe) combinadas.push(localD);
-                                });
-                                cache.disponibilidades = combinadas;
-                                localStorage.setItem('disp', JSON.stringify(cache.disponibilidades));
-                                if (state.miPareja) {
-                                    renderDisponibilidades();
-                                    renderPendientes();
-                                }
+                            // Sincronizar con Drive: reemplazar caché local con los datos limpios y únicos de Drive
+                            // (manteniendo solo las recién enviadas en los últimos 10 segundos si aún no aparecen en Drive)
+                            const ahora = Date.now();
+                            const pendientesSubida = cache.disponibilidades.filter(localD =>
+                                localD.ts && (ahora - localD.ts < 10000) &&
+                                !dispDrive.some(d =>
+                                    normalizarTexto(d.pareja) === normalizarTexto(localD.pareja) &&
+                                    normalizarFecha(d.fecha) === normalizarFecha(localD.fecha) &&
+                                    normalizarFranja(d.franja) === normalizarFranja(localD.franja)
+                                )
+                            );
+                            cache.disponibilidades = [...dispDrive, ...pendientesSubida];
+                            localStorage.setItem('disp', JSON.stringify(cache.disponibilidades));
+                            if (state.miPareja) {
+                                renderDisponibilidades();
+                                renderPendientes();
                             }
                         }
                     }
                 }).catch(() => {});
 
-            // Sincronizar Chats y Confirmaciones de Partido Cerrado desde la pestaña Chats de Drive
+            // Sincronizar Chats y Confirmaciones desde Drive
             const urlChats = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Chats&tqx=out:json`;
             fetch(urlChats)
                 .then(r => r.text())
@@ -681,75 +689,55 @@
                     const endIdx = text.lastIndexOf('}');
                     if (startIdx !== -1 && endIdx !== -1) {
                         const json = JSON.parse(text.substring(startIdx, endIdx + 1));
-                        if (json && json.table && json.table.rows && state.miPareja) {
-                            const miParejaNorm = normalizarTexto(state.miPareja);
+                        if (json && json.table && json.table.rows) {
                             let huboCambios = false;
-
+                            const miParejaNorm = normalizarTexto(state.miPareja);
                             json.table.rows.forEach(r => {
                                 if (r.c && r.c[2] && r.c[3] && r.c[4]) {
                                     const emisor = r.c[2].v ? r.c[2].v.toString().trim() : '';
                                     const receptor = r.c[3].v ? r.c[3].v.toString().trim() : '';
                                     const mensaje = r.c[4].v ? r.c[4].v.toString().trim() : '';
-                                    const fechaRaw = r.c[0] && r.c[0].f ? r.c[0].f : '';
+                                    const hora = r.c[0] && r.c[0].f ? r.c[0].f : '';
 
-                                    if (!emisor || !receptor || emisor.toLowerCase() === 'emisor') return;
+                                    if (!emisor || !receptor || !mensaje || emisor.toLowerCase() === 'emisor') return;
 
-                                    const emisorNorm = normalizarTexto(emisor);
-                                    const receptorNorm = normalizarTexto(receptor);
-
-                                    // Determinar si la conversación nos involucra (como emisor o receptor)
-                                    let rivalNombre = null;
-                                    if (emisorNorm === miParejaNorm) {
-                                        rivalNombre = receptor;
-                                    } else if (receptorNorm === miParejaNorm) {
-                                        rivalNombre = emisor;
+                                    let rival = '';
+                                    if (normalizarTexto(emisor) === miParejaNorm) {
+                                        rival = receptor;
+                                    } else if (normalizarTexto(receptor) === miParejaNorm) {
+                                        rival = emisor;
                                     }
 
-                                    if (rivalNombre) {
-                                        // Buscar el nombre exacto de la pareja rival en cache.parejas para mantener consistencia
-                                        const rivalObj = cache.parejas.find(p => normalizarTexto(p.nombre) === normalizarTexto(rivalNombre));
-                                        const claveRival = rivalObj ? rivalObj.nombre : rivalNombre;
-
-                                        // Si el mensaje es la marca de confirmación de partido cerrado, sincronizar estado verde para ambas parejas
+                                    if (rival) {
                                         if (mensaje.includes('[MATCH_CONFIRMADO]')) {
-                                            if (!cache.cerrados.some(c => normalizarTexto(c) === normalizarTexto(claveRival))) {
-                                                cache.cerrados.push(claveRival);
+                                            if (!cache.cerrados.some(c => normalizarTexto(c) === normalizarTexto(rival))) {
+                                                cache.cerrados.push(rival);
                                                 localStorage.setItem('cerrados', JSON.stringify(cache.cerrados));
                                                 huboCambios = true;
                                             }
                                         }
-
-                                        if (!cache.chats[claveRival]) cache.chats[claveRival] = [];
-                                        const textoLimpio = mensaje.replace('[MATCH_CONFIRMADO]', '').trim();
-                                        const yaExisteMsg = cache.chats[claveRival].some(m => 
-                                            normalizarTexto(m.emisor) === emisorNorm && m.mensaje === textoLimpio
-                                        );
-
-                                        if (!yaExisteMsg && textoLimpio) {
-                                            cache.chats[claveRival].push({
-                                                emisor: emisor,
-                                                mensaje: textoLimpio,
-                                                hora: fechaRaw || ''
-                                            });
+                                        const msgLimpio = mensaje.replace('[MATCH_CONFIRMADO]', '').trim();
+                                        if (!cache.chats[rival]) cache.chats[rival] = [];
+                                        const yaExisteMsg = cache.chats[rival].some(m => m.emisor === emisor && m.mensaje === msgLimpio);
+                                        if (!yaExisteMsg) {
+                                            cache.chats[rival].push({ emisor, mensaje: msgLimpio, hora });
                                             huboCambios = true;
                                         }
                                     }
                                 }
                             });
-
-                            if (huboCambios) {
+                            if (huboCambios && state.miPareja) {
                                 localStorage.setItem('chats', JSON.stringify(cache.chats));
                                 renderDisponibilidades();
                                 renderPendientes();
                                 renderListaChats();
-                                if (chatActivoRival) {
-                                    renderMensajesChat();
-                                }
+                                if (chatActivoRival) renderMensajesChat();
                             }
                         }
                     }
                 }).catch(() => {});
 
+            // Sincronizar Partidos desde Drive
             const urlPartidos = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Partidos&tqx=out:json`;
             fetch(urlPartidos)
                 .then(r => r.text())
@@ -790,7 +778,9 @@
             cache.parejas = [];
             if (json && json.table && json.table.rows) {
                 const cols = json.table.cols || [];
-                let idxPareja = 3, idxGrupo = 5, idxEstado = 6;
+                let idxPareja = 3;
+                let idxGrupo = 5;
+                let idxEstado = 6;
 
                 cols.forEach((c, idx) => {
                     if (c && (c.label || c.id)) {
@@ -807,7 +797,11 @@
                         let grup = r.c[idxGrupo] && r.c[idxGrupo].v ? r.c[idxGrupo].v.toString().trim() : '';
                         let estado = r.c[idxEstado] && r.c[idxEstado].v ? r.c[idxEstado].v.toString().trim() : 'Activo';
 
-                        if (parej && grup && !parej.includes('#N/A') && (estado.toUpperCase() === 'ACTIVO' || estado === '')) {
+                        if (parej && grup &&
+                            !parej.includes('#N/A') &&
+                            !parej.toUpperCase().includes('NOMBRE_PAREJA') &&
+                            !grup.toUpperCase().includes('GRUPO') &&
+                            (estado.toUpperCase() === 'ACTIVO' || estado === '')) {
                             let grupoFormateado = grup.toUpperCase().startsWith('GRUPO') ? grup.toUpperCase() : `GRUPO ${grup.toUpperCase()}`;
                             cache.parejas.push({ nombre: parej, grupo: grupoFormateado });
                         }
@@ -820,32 +814,51 @@
         }
 
         function finalizarCargaDrive() {
-            document.getElementById('loading-datos').classList.add('hidden');
-            document.getElementById('form-login').classList.remove('hidden');
+            const loading = document.getElementById('loading-datos');
+            const formLogin = document.getElementById('form-login');
+            if (loading) loading.classList.add('hidden');
+            if (formLogin) formLogin.classList.remove('hidden');
 
+            poblarSelectsLogin();
+
+            const modalId = document.getElementById('identificacion-modal');
+            if (modalId) modalId.classList.remove('hidden');
+
+            const expGrupo = localStorage.getItem('miGrupo');
+            const expPareja = localStorage.getItem('miPareja');
+            if (expGrupo && expPareja) {
+                const selectGrupo = document.getElementById('login-grupo');
+                const selectPareja = document.getElementById('login-pareja');
+
+                if (selectGrupo) {
+                    selectGrupo.value = expGrupo;
+                    selectGrupo.dispatchEvent(new Event('change'));
+                }
+                if (selectPareja) {
+                    selectPareja.value = expPareja;
+                }
+            }
+        }
+
+        function poblarSelectsLogin() {
             const selectGrupo = document.getElementById('login-grupo');
             const selectPareja = document.getElementById('login-pareja');
+            if (!selectGrupo || !selectPareja) return;
+
             const grupos = [...new Set(cache.parejas.map(p => p.grupo))].sort();
-            
             selectGrupo.innerHTML = '<option value="" disabled selected>Elige grupo</option>';
-            grupos.forEach(g => { selectGrupo.innerHTML += `<option value="${g}">${g}</option>`; });
+            grupos.forEach(g => {
+                selectGrupo.innerHTML += `<option value="${g}">${g}</option>`;
+            });
 
             selectGrupo.onchange = () => {
                 const grpSel = selectGrupo.value;
                 const parejasDelGrupo = cache.parejas.filter(p => p.grupo === grpSel);
                 selectPareja.innerHTML = '<option value="" disabled selected>Elige pareja</option>';
-                parejasDelGrupo.forEach(p => { selectPareja.innerHTML += `<option value="${p.nombre}">${p.nombre}</option>`; });
+                parejasDelGrupo.forEach(p => {
+                    selectPareja.innerHTML += `<option value="${p.nombre}">${p.nombre}</option>`;
+                });
             };
-
-            document.getElementById('identificacion-modal').classList.remove('hidden');
-
-            const expGrupo = localStorage.getItem('miGrupo');
-            const expPareja = localStorage.getItem('miPareja');
-            if (expGrupo && expPareja) {
-                selectGrupo.value = expGrupo;
-                selectGrupo.dispatchEvent(new Event('change'));
-                selectPareja.value = expPareja;
-            }
         }
 
         function guardarSeleccionPareja() {
@@ -868,23 +881,22 @@
             document.getElementById('identificacion-modal').classList.add('hidden');
 
             renderizarTodo();
+            sincronizarDatosDriveExtras();
         }
 
         function renderizarTodo() {
             if (cache.clasificacion.length === 0) {
                 const parejasGrupo = cache.parejas.filter(p => p.grupo === state.miGrupo);
-                cache.clasificacion = parejasGrupo.map(p => ({ pareja: p.nombre, pts: 0, jg: 0, jp: 0, dif: 0 }));
+                cache.clasificacion = parejasGrupo.map(p => ({
+                    pareja: p.nombre, pts: 0, jg: 0, jp: 0, dif: 0
+                }));
             }
             renderPendientes();
             renderDisponibilidades();
             renderListaChats();
             renderClasificacion();
-            sincronizarDatosDriveExtras();
         }
 
-        // ==========================================
-        // LÓGICA DE COINCIDENCIAS (TABLÓN)
-        // ==========================================
         function renderPendientes() {
             const container = document.getElementById('lista-pendientes');
             if (!container) return;
@@ -900,7 +912,7 @@
                 const rivalNorm = normalizarTexto(r.nombre);
                 const esCerrado = cache.cerrados.some(c => normalizarTexto(c) === rivalNorm);
                 const rivalDisps = cache.disponibilidades.filter(d => normalizarTexto(d.pareja) === rivalNorm);
-                
+
                 let coincide = false;
                 let fechaCoincidencia = '';
 
@@ -926,16 +938,16 @@
                     seCreoChatNuevo = true;
                 }
 
-                let colorClase = 'border-rose-500/50 bg-rose-950/20'; // Rojo
+                let colorClase = 'border-rose-500/50 bg-rose-950/20';
                 let estadoTexto = 'Sin coincidencia (Usa chat para acordar)';
                 let tagColor = 'bg-rose-500/20 text-rose-300';
 
                 if (esCerrado) {
-                    colorClase = 'border-emerald-500/50 bg-emerald-950/20'; // Verde
+                    colorClase = 'border-emerald-500/50 bg-emerald-950/20';
                     estadoTexto = 'Match confirmado / Partido cerrado';
                     tagColor = 'bg-emerald-500/20 text-emerald-300';
                 } else if (coincide) {
-                    colorClase = 'border-amber-500/50 bg-amber-950/20'; // Naranja
+                    colorClase = 'border-amber-500/50 bg-amber-950/20';
                     estadoTexto = `¡Match! Coincidencia: ${fechaCoincidencia}`;
                     tagColor = 'bg-amber-500/20 text-amber-300';
                 }
@@ -949,10 +961,16 @@
                             </span>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <button onclick="cerrarPartido('${r.nombre}')" class="w-10 h-10 rounded-full ${esCerrado ? 'bg-emerald-500/20 text-emerald-400 font-bold' : 'bg-emerald-600 hover:bg-emerald-500 text-white font-bold'} flex items-center justify-center shadow-md transition cursor-pointer" title="${esCerrado ? 'Partido confirmado en verde' : 'Pinchar para confirmar y pasar a verde'}">
-                                <i class="fas ${esCerrado ? 'fa-check-double' : 'fa-check'}"></i>
-                            </button>
-                            <button onclick="abrirChatWith('${r.nombre}')" class="w-10 h-10 rounded-full ${coincide ? 'bg-amber-500 hover:bg-amber-400 text-slate-950' : 'bg-cyan-600 hover:bg-cyan-500 text-white'} flex items-center justify-center shadow-md transition" title="Abrir Chat">
+                            ${!esCerrado ? `
+                                <button onclick="cerrarPartido('${r.nombre}')" class="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center shadow-md transition" title="${coincide ? 'Confirmar Match (Pasar a Verde)' : 'Marcar acuerdo manual (Pasar a Verde)'}">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            ` : `
+                                <span class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold" title="Partido cerrado en verde">
+                                    <i class="fas fa-check-double"></i>
+                                </span>
+                            `}
+                            <button onclick="abrirChatWith('${r.nombre}')" class="w-10 h-10 rounded-full ${coincide ? 'bg-amber-500 hover:bg-amber-400 text-slate-950' : 'bg-cyan-600 hover:bg-cyan-500 text-white'} flex items-center justify-center shadow-md transition" title="Abrir Chat para dialogar">
                                 <i class="fas fa-comment"></i>
                             </button>
                         </div>
@@ -968,131 +986,7 @@
 
         function renderDisponibilidades() {
             const container = document.getElementById('lista-disponibilidades');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const miGrupoNorm = normalizarTexto(state.miGrupo);
-            const miParejaNorm = normalizarTexto(state.miPareja);
-            const misDisps = cache.disponibilidades.filter(d => normalizarTexto(d.pareja) === miParejaNorm);
-
-            const dispsGrupo = cache.disponibilidades.filter(d => 
-                normalizarTexto(d.grupo) === miGrupoNorm && 
-                normalizarTexto(d.pareja) !== miParejaNorm
-            );
-
-            if (dispsGrupo.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No hay disponibilidades publicadas por otras parejas aún.</p>';
-                return;
-            }
-
-            dispsGrupo.forEach(d => {
-                const fItem = normalizarFecha(d.fecha);
-                const frItem = normalizarFranja(d.franja);
-                const esCerrado = cache.cerrados.some(c => normalizarTexto(c) === normalizarTexto(d.pareja));
-
-                const esMatch = misDisps.some(md => normalizarFecha(md.fecha) === fItem && normalizarFranja(md.franja) === frItem);
-
-                let borderColor = 'border-slate-700 bg-slate-900/80';
-                let badgeHtml = '';
-                if (esCerrado) {
-                    borderColor = 'border-emerald-500/70 bg-emerald-950/30';
-                    badgeHtml = '<span class="ml-1.5 text-[10px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full font-extrabold">CONFIRMADO</span>';
-                } else if (esMatch) {
-                    borderColor = 'border-amber-500/70 bg-amber-950/30';
-                    badgeHtml = '<span class="ml-1.5 text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-extrabold">¡MATCH!</span>';
-                }
-
-                container.innerHTML += `
-                    <div class="p-3 rounded-xl border ${borderColor} flex justify-between items-center text-xs transition-all">
-                        <div>
-                            <span class="font-bold ${esCerrado ? 'text-emerald-400' : (esMatch ? 'text-amber-400' : 'text-cyan-400')} block">
-                                ${d.pareja} ${badgeHtml}
-                            </span>
-                            <span class="text-slate-300"><i class="fas fa-calendar mr-1"></i> ${fItem || d.fecha}</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="${esCerrado ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : (esMatch ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-800 text-slate-300 border-slate-700')} px-3 py-1 rounded-full font-semibold border">
-                                ${d.franja}
-                            </span>
-                            <button onclick="cerrarPartido('${d.pareja}')" class="w-8 h-8 rounded-full ${esCerrado ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-600 hover:bg-emerald-500 text-white'} flex items-center justify-center shadow transition cursor-pointer" title="${esCerrado ? 'Confirmado' : 'Pinchar para marcar partido confirmado'}">
-                                <i class="fas ${esCerrado ? 'fa-check-double' : 'fa-check'}"></i>
-                            </button>
-                            <button onclick="abrirChatWith('${d.pareja}')" class="w-8 h-8 rounded-full ${esMatch || esCerrado ? 'bg-amber-500 hover:bg-amber-400 text-slate-950' : 'bg-cyan-600 hover:bg-cyan-500 text-white'} flex items-center justify-center shadow transition" title="Abrir Chat">
-                                <i class="fas fa-comment"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function guardarDisponibilidad() {
-            const fechaRaw = document.getElementById('input-fecha-disp').value;
-            const franja = document.getElementById('select-franja-disp').value;
-
-            if (!fechaRaw) {
-                alert("Selecciona una fecha.");
-                return;
-            }
-
-            const fecha = normalizarFecha(fechaRaw);
-            const nuevaDisp = { pareja: state.miPareja, grupo: state.miGrupo, fecha, franja };
-
-            const yaExiste = cache.disponibilidades.some(d => 
-                normalizarTexto(d.pareja) === normalizarTexto(state.miPareja) &&
-                normalizarFecha(d.fecha) === fecha &&
-                normalizarFranja(d.franja) === normalizarFranja(franja)
-            );
-
-            if (!yaExiste) {
-                cache.disponibilidades.push(nuevaDisp);
-                localStorage.setItem('disp', JSON.stringify(cache.disponibilidades));
-            }
-
-            renderDisponibilidades();
-            renderPendientes();
-            alert("Nuestra disponibilidad ha sido publicada con éxito.");
-
-            if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
-                fetch(URL_GOOGLE_SCRIPT, {
-                    method: 'POST', mode: 'no-cors',
-                    body: JSON.stringify({ accion: 'guardarDisponibilidad', ...nuevaDisp })
-                }).catch(e => console.log(e));
-            }
-        }
-
-        function cerrarPartido(rival) {
-            if (!cache.cerrados.some(c => normalizarTexto(c) === normalizarTexto(rival))) {
-                cache.cerrados.push(rival);
-                localStorage.setItem('cerrados', JSON.stringify(cache.cerrados));
-            }
-            const textoConfirmacion = "¡Match confirmado! Partido cerrado en verde.";
-            if (!cache.chats[rival]) {
-                cache.chats[rival] = [];
-            }
-            if (!cache.chats[rival].some(m => m.mensaje === textoConfirmacion)) {
-                cache.chats[rival].push({ 
-                    emisor: state.miPareja, 
-                    mensaje: textoConfirmacion, 
-                    hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
-                });
-                localStorage.setItem('chats', JSON.stringify(cache.chats));
-            }
-
-            // Enviar la confirmación a Google Sheets (pestaña Chats) para que la otra pareja reciba el estado verde y el mensaje
-            if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
-                fetch(URL_GOOGLE_SCRIPT, {
-                    method: 'POST', mode: 'no-cors',
-                    body: JSON.stringify({
-                        accion: 'guardarChat',
-                        grupo: state.miGrupo,
-                        emisor: state.miPareja,
-                        receptor: rival,
-                        mensaje: `[MATCH_CONFIRMADO] ${textoConfirmacion}`
-                    })
-                }).catch(e => console.log(e));
-            }
-
+// ... existing code ... -->
             renderDisponibilidades();
             renderPendientes();
             renderListaChats();
@@ -1101,304 +995,71 @@
             }
         }
 
-        function renderListaChats() {
-            const container = document.getElementById('lista-chats-activos');
-            if (!container) return;
+        function abrirChatWith(rival) {
+            chatActivoRival = rival;
+            document.getElementById('chat-titulo-pareja').innerText = rival;
+            document.getElementById('modal-chat-sala').classList.remove('hidden');
+            renderMensajesChat();
+        }
+
+        function cerrarChatSala() {
+            document.getElementById('modal-chat-sala').classList.add('hidden');
+            chatActivoRival = null;
+        }
+
+        function renderMensajesChat() {
+            const container = document.getElementById('chat-mensajes');
+            if (!container || !chatActivoRival) return;
             container.innerHTML = '';
 
-            const clavesChats = Object.keys(cache.chats);
-            if (clavesChats.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No tienes chats ni matches abiertos aún.</p>';
-                return;
-            }
-
-            clavesChats.forEach(rival => {
-                const ultimoMsg = cache.chats[rival][cache.chats[rival].length - 1];
+            const msgs = cache.chats[chatActivoRival] || [];
+            msgs.forEach(m => {
+                const esMio = m.emisor === state.miPareja;
                 container.innerHTML += `
-                    <div onclick="abrirChatWith('${rival}')" class="p-4 bg-slate-800/80 rounded-xl border border-slate-700 flex justify-between items-center cursor-pointer hover:border-cyan-500/50 transition">
-                        <div>
-                            <h4 class="font-bold text-white text-sm">${rival}</h4>
-                            <p class="text-xs text-slate-400 truncate max-w-[200px]">${ultimoMsg ? ultimoMsg.mensaje : 'Chat iniciado'}</p>
+                    <div class="flex flex-col ${esMio ? 'items-end' : 'items-start'}">
+                        <div class="max-w-[80%] p-3 rounded-2xl text-sm ${esMio ? 'bg-cyan-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'}">
+                            <span class="text-[10px] block opacity-75 mb-0.5 font-bold">${m.emisor}</span>
+                            <p>${m.mensaje}</p>
                         </div>
-                        <i class="fas fa-chevron-right text-cyan-400"></i>
                     </div>
                 `;
             });
+            container.scrollTop = container.scrollHeight;
         }
 
-        // ==========================================
-        // CLASIFICACIÓN Y PARTIDOS
-        // ==========================================
-        function renderClasificacion() {
-            const container = document.getElementById('cuerpo-clasificacion');
-            if (!container) return;
-            container.innerHTML = '';
+        function enviarMensajeChat() {
+            const input = document.getElementById('chat-input');
+            const txt = input ? input.value.trim() : '';
+            if (!txt || !chatActivoRival) return;
 
-            const clasifOrdenada = [...cache.clasificacion].sort((a, b) => {
-                if (b.pts !== a.pts) return b.pts - a.pts;
-                return b.dif - a.dif;
-            });
+            if (!cache.chats[chatActivoRival]) cache.chats[chatActivoRival] = [];
 
-            clasifOrdenada.forEach((item, index) => {
-                const esMiPareja = item.pareja === state.miPareja;
-                container.innerHTML += `
-                    <tr class="${esMiPareja ? 'bg-cyan-950/40 text-cyan-300 font-bold' : ''}">
-                        <td class="px-4 py-3">${index + 1}º</td>
-                        <td class="px-4 py-3">${item.pareja}</td>
-                        <td class="px-3 py-3 text-center font-bold text-cyan-400">${item.pts}</td>
-                        <td class="px-3 py-3 text-center">${item.jg}</td>
-                        <td class="px-3 py-3 text-center">${item.jp}</td>
-                        <td class="px-3 py-3 text-center ${item.dif >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${item.dif > 0 ? '+' + item.dif : item.dif}</td>
-                    </tr>
-                `;
-            });
-        }
-
-        function rellenarDesplegableRivales() {
-            const select = document.getElementById('res-rival');
-            if (!select) return;
-            select.innerHTML = '';
-
-            const rivales = cache.parejas.filter(p => p.grupo === state.miGrupo && p.nombre !== state.miPareja);
-            rivales.forEach(r => { select.innerHTML += `<option value="${r.nombre}">${r.nombre}</option>`; });
-        }
-
-        function abrirModalResultado() {
-            rellenarDesplegableRivales();
-            document.getElementById('modal-resultado').classList.remove('hidden');
-        }
-
-        function cerrarModalResultado() {
-            document.getElementById('modal-resultado').classList.add('hidden');
-        }
-
-        function guardarResultado() {
-            const rival = document.getElementById('res-rival').value;
-            const set1 = document.getElementById('res-set1').value.trim();
-            const set2 = document.getElementById('res-set2').value.trim();
-            const set3 = document.getElementById('res-set3').value.trim();
-            const quienGano = document.getElementById('res-ganador').value;
-
-            if (!rival || !set1 || !set2) {
-                alert("Completa al menos el Set 1 y Set 2.");
-                return;
-            }
-
-            const nombreGanador = quienGano === 'Nosotras' ? state.miPareja : rival;
-            const resultadoSets = set3 ? `${set1}, ${set2}, ${set3}` : `${set1}, ${set2}`;
-
-            const partidoObj = {
-                pareja1: state.miPareja,
-                pareja2: rival,
-                resultadoSets: resultadoSets,
-                ganador: nombreGanador,
-                grupo: state.miGrupo
+            const msgObj = {
+                emisor: state.miPareja,
+                mensaje: txt,
+                hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             };
+            cache.chats[chatActivoRival].push(msgObj);
+            localStorage.setItem('chats', JSON.stringify(cache.chats));
 
-            const indiceExistente = cache.partidos.findIndex(p => 
-                (p.pareja1.toLowerCase() === state.miPareja.toLowerCase() && p.pareja2.toLowerCase() === rival.toLowerCase()) ||
-                (p.pareja2.toLowerCase() === state.miPareja.toLowerCase() && p.pareja1.toLowerCase() === rival.toLowerCase())
-            );
-
-            if (indiceExistente !== -1) {
-                partidoPendienteGuardar = { partidoObj, indiceExistente };
-                document.getElementById('texto-confirmar-duplicado').innerText = `Ya has publicado un resultado para la pareja "${rival}". ¿Deseas modificarlo?`;
-                document.getElementById('modal-confirmar-duplicado').classList.remove('hidden');
-            } else {
-                ejecutarGuardadoResultado(partidoObj, false);
-            }
-        }
-
-        function ejecutarGuardadoResultado(partidoObj, esModificacion) {
-            if (esModificacion && partidoPendienteGuardar) {
-                cache.partidos[partidoPendienteGuardar.indiceExistente] = partidoObj;
-                recalcularTodaLaClasificacion();
-            } else {
-                cache.partidos.push(partidoObj);
-                actualizarRankingLocal(partidoObj);
-            }
-
-            localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
-            cerrarPartido(partidoObj.pareja2);
-            cerrarModalResultado();
-            renderPartidosRegistrados();
-            renderClasificacion();
+            input.value = '';
+            renderMensajesChat();
+            renderListaChats();
 
             if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
                 fetch(URL_GOOGLE_SCRIPT, {
                     method: 'POST', mode: 'no-cors',
-                    body: JSON.stringify({ accion: 'guardarResultado', ...partidoObj })
+                    body: JSON.stringify({
+                        accion: 'guardarChat',
+                        grupo: state.miGrupo,
+                        emisor: state.miPareja,
+                        receptor: chatActivoRival,
+                        mensaje: txt
+                    })
                 }).catch(e => console.log(e));
             }
         }
 
-        function actualizarRankingLocal(p) {
-            let jg1 = 0, jp1 = 0, jg2 = 0, jp2 = 0;
-            const sets = p.resultadoSets.split(',');
-            sets.forEach(s => {
-                const partes = s.trim().split('-');
-                if (partes.length === 2) {
-                    const a = parseInt(partes[0]) || 0;
-                    const b = parseInt(partes[1]) || 0;
-                    jg1 += a; jp1 += b;
-                    jg2 += b; jp2 += a;
-                }
-            });
-
-            const ganoP1 = p.ganador === p.pareja1;
-            const ptsP1 = ganoP1 ? (sets.length === 3 ? 3 : 4) : (sets.length === 3 ? 2 : 1);
-            const ptsP2 = ganoP1 ? (sets.length === 3 ? 2 : 1) : (sets.length === 3 ? 3 : 4);
-
-            const c1 = cache.clasificacion.find(c => c.pareja === p.pareja1);
-            if (c1) { c1.pts += ptsP1; c1.jg += jg1; c1.jp += jp1; c1.dif = c1.jg - c1.jp; }
-
-            const c2 = cache.clasificacion.find(c => c.pareja === p.pareja2);
-            if (c2) { c2.pts += ptsP2; c2.jg += jg2; c2.jp += jp2; c2.dif = c2.jg - c2.jp; }
-        }
-
-        function renderPartidosRegistrados() {
-            const container = document.getElementById('lista-partidos');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const misPartidos = cache.partidos.filter(p => p.pareja1 === state.miPareja || p.pareja2 === state.miPareja);
-            if (misPartidos.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No has registrado partidos en esta ronda.</p>';
-                return;
-            }
-
-            misPartidos.forEach(p => {
-                const gano = p.ganador === state.miPareja;
-                const rival = p.pareja1 === state.miPareja ? p.pareja2 : p.pareja1;
-                container.innerHTML += `
-                    <div class="p-4 bg-slate-800/80 rounded-xl border border-slate-700 flex justify-between items-center">
-                        <div>
-                            <span class="font-bold text-white text-sm block">vs ${rival}</span>
-                            <span class="text-xs text-cyan-400 font-semibold">${p.resultadoSets}</span>
-                        </div>
-                        <span class="text-xs font-bold px-3 py-1 rounded-full ${gano ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
-                            ${gano ? 'Victoria' : 'Derrota'}
-                        </span>
-                    </div>
-                `;
-            });
-        }
-
-        function salirModoAdmin() {
-            state.rol = 'jugadora';
-            document.getElementById('badge-rol').innerText = 'Jugadora';
-            document.getElementById('badge-rol').className = 'bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded-full font-semibold border border-slate-600';
-            cambiarPestana('inicio', document.querySelector('.tab-btn'));
-        }
-
-        function prepararPanelAdminGrupos() {
-            renderAdminListaPartidos();
-            renderAdminReasignacionGrupos();
-        }
-
-        function renderAdminListaPartidos() {
-            const container = document.getElementById('admin-lista-partidos');
-            if (!container) return;
-            container.innerHTML = '';
-
-            cache.partidos.forEach((p, index) => {
-                container.innerHTML += `
-                    <div class="flex justify-between items-center p-3 bg-slate-800 rounded-xl border border-slate-700 text-xs mb-2">
-                        <div>
-                            <span class="font-bold text-white block">${p.pareja1} vs ${p.pareja2}</span>
-                            <span class="text-cyan-400">${p.resultadoSets}</span>
-                        </div>
-                        <button onclick="borrarPartidoAdmin(${index})" class="text-rose-400 bg-slate-900 p-2 rounded-lg"><i class="fas fa-trash"></i></button>
-                    </div>
-                `;
-            });
-        }
-
-        function borrarPartidoAdmin(index) {
-            if (confirm("¿Estás segura de eliminar este partido?")) {
-                cache.partidos.splice(index, 1);
-                localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
-                recalcularTodaLaClasificacion();
-                renderAdminListaPartidos();
-                renderPartidosRegistrados();
-                renderClasificacion();
-            }
-        }
-
-        function recalcularTodaLaClasificacion() {
-            cache.clasificacion.forEach(c => { c.pts = 0; c.jg = 0; c.jp = 0; c.dif = 0; });
-            cache.partidos.forEach(p => { actualizarRankingLocal(p); });
-        }
-
-        function renderAdminReasignacionGrupos() {
-            const container = document.getElementById('panel-admin-grupos');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const gruposDisponibles = [...new Set(cache.parejas.map(p => p.grupo))].sort();
-            cache.parejas.forEach((p, idx) => {
-                let opciones = gruposDisponibles.map(g => `<option value="${g}" ${p.grupo === g ? 'selected' : ''}>${g}</option>`).join('');
-                container.innerHTML += `
-                    <div class="flex justify-between items-center p-2.5 bg-slate-800/80 rounded-xl border border-slate-700 text-xs">
-                        <span class="font-semibold text-slate-200">${p.nombre}</span>
-                        <select id="select-grupo-pareja-${idx}" class="bg-slate-900 border border-slate-700 text-cyan-400 p-2 rounded-lg font-bold">
-                            ${opciones}
-                        </select>
-                    </div>
-                `;
-            });
-        }
-
-        function vaciarChatsYDisponibilidades() {
-            if (confirm("¿Segura que deseas vaciar todas las disponibilidades y chats?")) {
-                cache.disponibilidades = [];
-                cache.chats = {};
-                cache.cerrados = [];
-                localStorage.removeItem('disp');
-                localStorage.removeItem('chats');
-                localStorage.removeItem('cerrados');
-                renderizarTodo();
-
-                if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
-                    fetch(URL_GOOGLE_SCRIPT, {
-                        method: 'POST', mode: 'no-cors',
-                        body: JSON.stringify({ accion: 'vaciarChatsYDisponibilidades' })
-                    }).catch(e => console.log(e));
-                }
-                alert("Limpieza completada.");
-            }
-        }
-
-        function iniciarSiguienteRonda() {
-            const fIni = document.getElementById('admin-ronda-inicio').value;
-            const fFin = document.getElementById('admin-ronda-fin').value;
-
-            const asignaciones = [];
-            cache.parejas.forEach((p, idx) => {
-                const el = document.getElementById(`select-grupo-pareja-${idx}`);
-                if (el) {
-                    const nuevoGrupo = el.value;
-                    p.grupo = nuevoGrupo;
-                    asignaciones.push({ nombre: p.nombre, nuevoGrupo: nuevoGrupo });
-                }
-            });
-
-            if (confirm("¿Deseas iniciar la siguiente ronda?")) {
-                if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
-                    fetch(URL_GOOGLE_SCRIPT, {
-                        method: 'POST', mode: 'no-cors',
-                        body: JSON.stringify({
-                            accion: 'cambiarRonda',
-                            fechaInicio: fIni,
-                            fechaFin: fFin,
-                            asignaciones: asignaciones
-                        })
-                    }).catch(e => console.log(e));
-                }
-                localStorage.clear();
-                location.reload();
-            }
-        }
-    </script>
-</body>
-</html>
+        function renderListaChats() {
+            const container = document.getElementById('lista-chats-activos');
+// ... existing code ... -->
