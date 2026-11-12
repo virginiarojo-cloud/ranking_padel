@@ -16,7 +16,8 @@
             color: #f8fafc;
         }
 
-        .bg-pista { background: linear-gradient(135deg, #0284c7, #06b6d4); }
+        /* Colores principales: Azul pista, Turquesa y un toque Magenta */
+        .bg-pista { background: linear-gradient(135deg, #0284c7, #06b6d4); } /* Sky to Cyan */
         .text-pista { color: #0ea5e9; }
         .border-pista { border-color: #0ea5e9; }
         
@@ -38,7 +39,7 @@
         }
 
         .glass-card {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(30, 41, 59, 0.7); /* Slate 800 */
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -50,6 +51,7 @@
             border-bottom: 3px solid #0ea5e9;
         }
         
+        /* Ocultar barra de scroll */
         ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
@@ -88,6 +90,7 @@
     <header class="glass-card m-4 p-4 shadow-lg rounded-2xl shrink-0 z-10 relative overflow-hidden">
         <div class="absolute -right-10 -top-10 w-32 h-32 bg-cyan-500 rounded-full blur-3xl opacity-20"></div>
         
+        <!-- Fila 1: Título, Rol y Botón Admin -->
         <div class="flex justify-between items-center mb-3">
             <h1 class="text-xl font-extrabold tracking-tight">RANKING <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-cyan-300">NORTE</span></h1>
             <div class="flex items-center space-x-3">
@@ -98,6 +101,7 @@
             </div>
         </div>
 
+        <!-- Fila 2: Grupo y Pareja Actual -->
         <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
             <div class="flex flex-col">
                 <span class="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1">Grupo Actual</span>
@@ -109,16 +113,17 @@
             </div>
         </div>
         
+        <!-- Ronda info -->
         <div class="mt-3 flex items-center text-xs text-slate-400">
             <i class="fas fa-calendar-alt mr-2 text-cyan-400"></i>
             <span>Ronda en curso: <span id="info-ronda" class="text-white font-semibold">Cargando...</span></span>
         </div>
     </header>
 
-    <!-- ÁREA DE CONTENIDO -->
+    <!-- ÁREA DE CONTENIDO (Scrollable) -->
     <main class="flex-1 overflow-y-auto px-4 pb-24 relative z-0">
         
-        <!-- PESTAÑA: INICIO -->
+        <!-- PESTAÑA: INICIO (Disponibilidad y Matches) -->
         <div id="tab-inicio" class="tab-content block animate-fade-in space-y-6">
             
             <!-- TARJETA: DISPONIBILIDAD -->
@@ -175,7 +180,7 @@
 
         </div>
 
-        <!-- PESTAÑA: CHAT -->
+        <!-- PESTAÑA: MATCH & CHAT -->
         <div id="tab-chats" class="tab-content hidden animate-fade-in space-y-6">
             <div class="glass-card p-5">
                 <h3 class="text-lg font-bold mb-4 flex items-center">
@@ -230,7 +235,7 @@
             </div>
         </div>
 
-        <!-- PESTAÑA: ADMIN -->
+        <!-- PESTAÑA: ADMIN (Oculta por defecto) -->
         <div id="tab-admin" class="tab-content hidden animate-fade-in space-y-6">
             <div class="glass-card p-5 border border-rose-500/30">
                 <div class="flex justify-between items-center mb-6">
@@ -244,6 +249,7 @@
                 
                 <p class="text-sm text-slate-400 mb-6">Gestión completa de rondas, ajuste de resultados registrados y limpieza de conversaciones y disponibilidades.</p>
 
+                <!-- BOTÓN DE LIMPIEZA RÁPIDA DE CHATS Y DISPONIBILIDADES -->
                 <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 mb-6">
                     <h4 class="font-bold text-white text-sm mb-2"><i class="fas fa-trash-alt text-rose-400 mr-2"></i> Limpieza de Chats y Disponibilidades</h4>
                     <p class="text-xs text-slate-400 mb-4">Borra todas las conversaciones y disponibilidades publicadas para que todas las parejas inicien en blanco.</p>
@@ -252,18 +258,20 @@
                     </button>
                 </div>
 
+                <!-- SECCIÓN DE AJUSTE DE PARTIDOS REGISTRADOS -->
                 <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 mb-6">
                     <h4 class="font-bold text-white text-sm mb-2"><i class="fas fa-edit text-cyan-400 mr-2"></i> Corrección de Partidos / Resultados</h4>
                     <div id="admin-lista-partidos" class="space-y-2 max-h-48 overflow-y-auto">
-                        <!-- JS -->
+                        <!-- JS inserta partidos para borrar o editar -->
                     </div>
                 </div>
 
+                <!-- SECCIÓN DE ASIGNACIÓN DE GRUPOS Y ASCENSOS/DESCENSOS -->
                 <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 mb-6">
                     <h4 class="font-bold text-white text-sm mb-2"><i class="fas fa-users-cog text-cyan-400 mr-2"></i> Reasignar Grupos (Nueva Ronda)</h4>
                     <p class="text-xs text-slate-400 mb-3">Asigna los nuevos grupos a las parejas para la siguiente ronda (ascensos/descensos):</p>
                     <div id="panel-admin-grupos" class="space-y-3 max-h-56 overflow-y-auto">
-                        <!-- JS -->
+                        <!-- JS rellena esto con desplegables de grupo por pareja -->
                     </div>
                 </div>
 
@@ -283,7 +291,7 @@
 
     </main>
 
-    <!-- NAVEGACIÓN INFERIOR -->
+    <!-- NAVEGACIÓN INFERIOR (Bottom Bar) -->
     <nav class="fixed bottom-0 w-full glass-card border-t border-slate-700 pb-safe z-40 rounded-none rounded-t-3xl">
         <div class="flex justify-around items-center h-20 px-2">
             <button class="tab-btn active flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors text-slate-400" onclick="cambiarPestana('inicio', this)">
@@ -305,7 +313,8 @@
         </div>
     </nav>
 
-    <!-- MODALES -->
+    <!-- MODALES VARIOS -->
+    <!-- Modal Baremo (Info) -->
     <div id="modal-baremo" class="fixed inset-0 z-50 hidden flex justify-center items-center bg-slate-900/90 backdrop-blur-sm p-4">
         <div class="glass-card p-6 w-full max-w-sm relative">
             <button onclick="document.getElementById('modal-baremo').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
@@ -318,20 +327,38 @@
                 <p><strong>Partido Ganado en 3 sets:</strong> 3 ptos.</p>
                 <p><strong>Partido Perdido en 3 sets:</strong> 2 ptos.</p>
                 <p><strong>Partido Perdido en 2 sets:</strong> 1 pto.</p>
+                <hr class="border-slate-700">
+                <p><strong>Partido no finalizado:</strong></p>
+                <ul class="list-disc pl-5">
+                    <li>2º set sin finalizar: 1 punto para cada pareja.</li>
+                    <li>2 sets finalizados, cada pareja gana uno: 2 puntos para cada pareja.</li>
+                </ul>
+                <hr class="border-slate-700">
+                <p class="text-cyan-400 font-bold">CRITERIO DE CLASIFICACIÓN:</p>
+                <ol class="list-decimal pl-5">
+                    <li>Puntos (Pts)</li>
+                    <li>Diferencia de juegos (DIF)</li>
+                    <li>Enfrentamiento directo</li>
+                </ol>
             </div>
         </div>
     </div>
 
+    <!-- Modal Ver Partidos de Pareja en Ranking -->
     <div id="modal-historial-pareja" class="fixed inset-0 z-50 hidden flex justify-center items-center bg-slate-900/90 backdrop-blur-sm p-4">
         <div class="glass-card p-6 w-full max-w-sm relative">
             <button onclick="document.getElementById('modal-historial-pareja').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
                 <i class="fas fa-times text-xl"></i>
             </button>
             <h3 class="text-lg font-bold mb-1 text-cyan-400" id="historial-nombre-pareja">Pareja</h3>
-            <div id="historial-lista-partidos" class="space-y-2 max-h-60 overflow-y-auto text-sm"></div>
+            <p class="text-xs text-slate-400 mb-4">Historial de partidos en esta ronda:</p>
+            <div id="historial-lista-partidos" class="space-y-2 max-h-60 overflow-y-auto text-sm">
+                <!-- JS inserta partidos de la pareja -->
+            </div>
         </div>
     </div>
 
+    <!-- Modal Registrar Resultado -->
     <div id="modal-resultado" class="fixed inset-0 z-50 hidden flex items-end justify-center bg-slate-900/80 backdrop-blur-sm transition-opacity">
         <div class="glass-card w-full max-w-md p-6 rounded-t-3xl rounded-b-none border-b-0 transform translate-y-0 transition-transform duration-300">
             <div class="flex justify-between items-center mb-6">
@@ -344,20 +371,23 @@
                     <label class="block text-sm text-slate-400 mb-1">Rival</label>
                     <select id="res-rival" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none focus:border-cyan-400"></select>
                 </div>
+                
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm text-slate-400 mb-1">Set 1</label>
-                        <input type="text" id="res-set1" value="0-0" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none text-center font-bold">
+                        <label class="block text-sm text-slate-400 mb-1">Resultado Set 1</label>
+                        <input type="text" id="res-set1" value="0-0" placeholder="Ej: 6-4" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none text-center font-bold tracking-widest focus:border-cyan-400">
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-400 mb-1">Set 2</label>
-                        <input type="text" id="res-set2" value="0-0" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none text-center font-bold">
+                        <label class="block text-sm text-slate-400 mb-1">Resultado Set 2</label>
+                        <input type="text" id="res-set2" value="0-0" placeholder="Ej: 4-6" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none text-center font-bold tracking-widest focus:border-cyan-400">
                     </div>
                 </div>
+
                 <div>
-                    <label class="block text-sm text-slate-400 mb-1">Set 3 (Opcional)</label>
-                    <input type="text" id="res-set3" placeholder="Ej: 6-2" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none text-center font-bold">
+                    <label class="block text-sm text-slate-400 mb-1">Resultado Set 3 (Opcional)</label>
+                    <input type="text" id="res-set3" placeholder="Ej: 6-2 o vacío" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none text-center font-bold tracking-widest focus:border-cyan-400">
                 </div>
+
                 <div>
                     <label class="block text-sm text-slate-400 mb-1">¿Quién ganó?</label>
                     <select id="res-ganador" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none focus:border-cyan-400">
@@ -365,11 +395,13 @@
                         <option value="Rival">Rival</option>
                     </select>
                 </div>
+
                 <button onclick="guardarResultado()" class="btn-primary w-full py-4 mt-4">Guardar Resultado</button>
             </div>
         </div>
     </div>
 
+    <!-- Modal Admin PIN -->
     <div id="modal-admin-pin" class="fixed inset-0 z-50 hidden flex justify-center items-center bg-slate-900/90 backdrop-blur-sm p-4">
         <div class="glass-card p-6 w-full max-w-xs text-center">
             <h3 class="text-lg font-bold mb-4 text-white">Acceso Administradora</h3>
@@ -381,42 +413,56 @@
         </div>
     </div>
 
+    <!-- MODAL CONFIRMACIÓN DE DUPLICADOS -->
     <div id="modal-confirmar-duplicado" class="fixed inset-0 z-50 hidden flex justify-center items-center bg-slate-900/90 backdrop-blur-sm p-4">
         <div class="glass-card p-6 w-full max-w-sm text-center">
+            <div class="w-12 h-12 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center mb-4 text-amber-400 text-2xl">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
             <h3 class="text-lg font-bold text-white mb-2">Partido ya registrado</h3>
             <p id="texto-confirmar-duplicado" class="text-sm text-slate-300 mb-6"></p>
             <div class="flex space-x-3">
-                <button type="button" id="btn-duplicado-no" class="flex-1 p-3 rounded-xl bg-slate-700 text-white font-semibold">Cancelar</button>
-                <button type="button" id="btn-duplicado-si" class="flex-1 p-3 rounded-xl bg-amber-500 text-slate-950 font-bold">Sí, Modificar</button>
+                <button type="button" id="btn-duplicado-no" class="flex-1 p-3 rounded-xl bg-slate-700 text-white font-semibold hover:bg-slate-600 transition">Cancelar</button>
+                <button type="button" id="btn-duplicado-si" class="flex-1 p-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition">Sí, Modificar</button>
             </div>
         </div>
     </div>
 
+    <!-- Modal Chat Activo -->
     <div id="modal-chat-sala" class="fixed inset-0 z-50 hidden flex flex-col bg-slate-900 pb-safe">
         <div class="glass-card rounded-none p-4 flex items-center justify-between shadow-md shrink-0">
             <div class="flex items-center">
                 <button onclick="cerrarChatSala()" class="text-slate-400 hover:text-white mr-4 p-2">
                     <i class="fas fa-arrow-left text-xl"></i>
                 </button>
+                <div class="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center mr-3 border border-cyan-500/50">
+                    <i class="fas fa-user-friends text-cyan-400"></i>
+                </div>
                 <div>
                     <h3 class="font-bold text-white text-sm" id="chat-titulo-pareja">Pareja Rival</h3>
                     <p class="text-xs text-cyan-400">Chat del partido</p>
                 </div>
             </div>
         </div>
-        <div id="chat-mensajes" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-900/50"></div>
+
+        <div id="chat-mensajes" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-900/50">
+            <!-- Mensajes JS -->
+        </div>
+
         <div class="glass-card rounded-none border-t border-slate-700 p-3 flex items-center shrink-0 mb-4">
-            <input type="text" id="chat-input" placeholder="Escribe un mensaje..." class="flex-1 p-3 rounded-full bg-slate-800 text-white outline-none border border-slate-700 text-sm">
-            <button onclick="enviarMensajeChat()" class="w-12 h-12 rounded-full bg-pista text-white ml-2 flex items-center justify-center shadow-lg">
+            <input type="text" id="chat-input" placeholder="Escribe un mensaje..." class="flex-1 p-3 rounded-full bg-slate-800 text-white outline-none border border-slate-700 focus:border-cyan-400 transition-colors text-sm">
+            <button onclick="enviarMensajeChat()" class="w-12 h-12 rounded-full bg-pista text-white ml-2 flex items-center justify-center shadow-lg shadow-cyan-500/30 transform transition hover:scale-105">
                 <i class="fas fa-paper-plane"></i>
             </button>
         </div>
     </div>
 
     <script>
+        // CONFIGURACIÓN DE CONEXIÓN
         const SHEET_ID = '1dazI73BA8aUMa_RNFH_Ovh_ZJsDMu1i71we47xF0xHU'; 
         const URL_GOOGLE_SCRIPT = 'https://script.google.com/macros/s/AKfycbzzSaNcFcsncz2hIMNpsv2YwHq1FwSpN4YcDAF4yR5G4aorwC1pgkYZ6X58vhzMT8Cerg/exec'; 
 
+        // ESTADO GLOBAL
         const state = {
             miGrupo: '',
             miPareja: '',
@@ -428,6 +474,7 @@
             clasificacion: [],
             parejas: [],
             disponibilidades: JSON.parse(localStorage.getItem('disp')) || [],
+            matches: JSON.parse(localStorage.getItem('matches')) || [],
             cerrados: JSON.parse(localStorage.getItem('cerrados')) || [], 
             chats: JSON.parse(localStorage.getItem('chats')) || {}, 
             partidos: JSON.parse(localStorage.getItem('partidos_registrados')) || []
@@ -436,6 +483,7 @@
         let chatActivoRival = null;
         let partidoPendienteGuardar = null;
 
+        // UTILIDAD DE NORMALIZACIÓN PARA COINCIDENCIAS EXACTAS DE FECHA, FRANJA Y PAREJA
         function normalizarTexto(txt) {
             return (txt || '').toString().trim().toLowerCase().replace(/\s+/g, ' ');
         }
@@ -443,6 +491,7 @@
         function normalizarFecha(f) {
             if (!f) return '';
             let s = f.toString().trim();
+            // Formato Date(YYYY,M,D) de Google GViz (mes base 0)
             const mGviz = s.match(/^Date\((\d+),(\d+),(\d+)\)/);
             if (mGviz) {
                 const y = mGviz[1];
@@ -450,10 +499,12 @@
                 const d = String(parseInt(mGviz[3], 10)).padStart(2, '0');
                 return `${y}-${m}-${d}`;
             }
+            // Formato DD/MM/YYYY o DD-MM-YYYY -> YYYY-MM-DD
             const mDMY = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
             if (mDMY) {
                 return `${mDMY[3]}-${mDMY[2].padStart(2, '0')}-${mDMY[1].padStart(2, '0')}`;
             }
+            // Formato YYYY/MM/DD o YYYY-MM-DD
             const mYMD = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
             if (mYMD) {
                 return `${mYMD[1]}-${mYMD[2].padStart(2, '0')}-${mYMD[3].padStart(2, '0')}`;
@@ -462,18 +513,29 @@
         }
 
         function normalizarFranja(fr) {
+            // Unificar espacios y guiones (ej: "9:00 - 12:00" y "09:00-12:00" -> "9:00-12:00")
             return (fr || '').toString().trim().replace(/\s+/g, '').replace(/^0(\d:)/, '$1').replace(/-0(\d:)/, '-$1');
         }
 
+        // CONFIGURACIÓN DE EVENTOS ADMIN
         function configurarEventosAdmin() {
             const btnCancelar = document.getElementById('btn-cancelar-pin');
             const btnEntrar = document.getElementById('btn-entrar-pin');
             const inputPin = document.getElementById('admin-pin');
             
-            if (btnCancelar) btnCancelar.onclick = cerrarModalAdminPIN;
-            if (btnEntrar) btnEntrar.onclick = procesarPinAdmin;
-            if (inputPin) inputPin.onkeypress = (e) => { if (e.key === 'Enter') procesarPinAdmin(); };
+            if (btnCancelar) {
+                btnCancelar.onclick = cerrarModalAdminPIN;
+            }
+            if (btnEntrar) {
+                btnEntrar.onclick = procesarPinAdmin;
+            }
+            if (inputPin) {
+                inputPin.onkeypress = (e) => {
+                    if (e.key === 'Enter') procesarPinAdmin();
+                };
+            }
 
+            // Modal duplicados
             const btnDupSi = document.getElementById('btn-duplicado-si');
             const btnDupNo = document.getElementById('btn-duplicado-no');
             if (btnDupSi) {
@@ -496,11 +558,13 @@
         function abrirModalAdminPIN() {
             const pinInput = document.getElementById('admin-pin');
             if (pinInput) pinInput.value = '';
-            document.getElementById('modal-admin-pin').classList.remove('hidden');
+            const modal = document.getElementById('modal-admin-pin');
+            if (modal) modal.classList.remove('hidden');
         }
 
         function cerrarModalAdminPIN() {
-            document.getElementById('modal-admin-pin').classList.add('hidden');
+            const modal = document.getElementById('modal-admin-pin');
+            if (modal) modal.classList.add('hidden');
         }
 
         function procesarPinAdmin() {
@@ -522,6 +586,7 @@
             }
         }
 
+        // NAVEGACIÓN DE PESTAÑAS
         function cambiarPestana(nombrePestana, elementoBtn) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => {
@@ -530,7 +595,9 @@
             });
 
             const tabSeleccionada = document.getElementById(`tab-${nombrePestana}`);
-            if (tabSeleccionada) tabSeleccionada.classList.remove('hidden');
+            if (tabSeleccionada) {
+                tabSeleccionada.classList.remove('hidden');
+            }
 
             if (elementoBtn) {
                 elementoBtn.classList.add('active', 'text-cyan-400');
@@ -550,12 +617,14 @@
             }
         }
 
+        // INICIALIZACIÓN
         window.onload = () => {
             configurarEventosAdmin();
             cargarDatosDesdeDrive();
             
             const btnTuerca = document.getElementById('btn-tuerca-admin');
             if (btnTuerca) {
+                btnTuerca.removeEventListener('click', abrirModalAdminPIN);
                 btnTuerca.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -564,7 +633,15 @@
             }
         };
 
+        // ==========================================
+        // CARGA DE DATOS Y CONEXIÓN DRIVE
+        // ==========================================
         function cargarDatosDesdeDrive() {
+            const expGrupo = localStorage.getItem('miGrupo');
+            const expPareja = localStorage.getItem('miPareja');
+            if (expGrupo) state.miGrupo = expGrupo;
+            if (expPareja) state.miPareja = expPareja;
+
             if (typeof SHEET_ID !== 'undefined' && SHEET_ID && SHEET_ID !== '') {
                 cargarDesdePestanaParejas();
             } else {
@@ -580,15 +657,28 @@
                     const startIdx = text.indexOf('{');
                     const endIdx = text.lastIndexOf('}');
                     if (startIdx !== -1 && endIdx !== -1) {
-                        const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+                        const jsonText = text.substring(startIdx, endIdx + 1);
+                        const json = JSON.parse(jsonText);
                         procesarDatosDrive(json);
                     }
                 })
                 .catch(e => {
                     console.error("Error al cargar pestaña Parejas:", e);
+                    const urlFallback = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=select%20*&sheet=Parejas&tqx=out:json`;
+                    fetch(urlFallback)
+                        .then(r => r.text())
+                        .then(text => {
+                            const startIdx = text.indexOf('{');
+                            const endIdx = text.lastIndexOf('}');
+                            if (startIdx !== -1 && endIdx !== -1) {
+                                const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+                                procesarDatosDrive(json);
+                            }
+                        }).catch(err => console.error("Error en fallback:", err));
                 });
 
             cargarFechasRondaActiva();
+
             // Sincronización periódica cada 12 segundos para reflejar cambios de la otra pareja en tiempo real
             setInterval(() => {
                 if (state.miPareja) {
@@ -624,10 +714,11 @@
                         }
                     }
                 })
-                .catch(e => console.log(e));
+                .catch(e => console.log("No se pudo cargar la fecha de la ronda activa:", e));
         }
 
         function sincronizarDatosDriveExtras() {
+            // 1. Sincronizar Disponibilidades desde Google Sheets sin duplicados
             const urlDisp = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Disponibilidad&tqx=out:json`;
             fetch(urlDisp)
                 .then(r => r.text())
@@ -647,7 +738,6 @@
                                     const fecha = normalizarFecha(fechaRaw);
                                     const franja = r.c[4].v ? r.c[4].v.toString().trim() : '';
                                     if (pareja && fecha && !pareja.toLowerCase().includes('pareja')) {
-                                        // Evitar duplicados en la misma lectura de Drive
                                         const yaEnDrive = dispDrive.some(d =>
                                             normalizarTexto(d.pareja) === normalizarTexto(pareja) &&
                                             normalizarFecha(d.fecha) === fecha &&
@@ -659,8 +749,7 @@
                                     }
                                 }
                             });
-                            // Sincronizar con Drive: reemplazar caché local con los datos limpios y únicos de Drive
-                            // (manteniendo solo las recién enviadas en los últimos 10 segundos si aún no aparecen en Drive)
+
                             const ahora = Date.now();
                             const pendientesSubida = cache.disponibilidades.filter(localD =>
                                 localD.ts && (ahora - localD.ts < 10000) &&
@@ -680,7 +769,7 @@
                     }
                 }).catch(() => {});
 
-            // Sincronizar Chats y Confirmaciones desde Drive
+            // 2. Sincronizar Chats y Confirmaciones ([MATCH_CONFIRMADO]) desde Google Sheets
             const urlChats = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Chats&tqx=out:json`;
             fetch(urlChats)
                 .then(r => r.text())
@@ -737,7 +826,7 @@
                     }
                 }).catch(() => {});
 
-            // Sincronizar Partidos desde Drive
+            // 3. Sincronizar Partidos desde Google Sheets
             const urlPartidos = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Partidos&tqx=out:json`;
             fetch(urlPartidos)
                 .then(r => r.text())
@@ -778,7 +867,7 @@
             cache.parejas = [];
             if (json && json.table && json.table.rows) {
                 const cols = json.table.cols || [];
-                let idxPareja = 3;
+                let idxPareja = 3; 
                 let idxGrupo = 5;
                 let idxEstado = 6;
 
@@ -797,11 +886,12 @@
                         let grup = r.c[idxGrupo] && r.c[idxGrupo].v ? r.c[idxGrupo].v.toString().trim() : '';
                         let estado = r.c[idxEstado] && r.c[idxEstado].v ? r.c[idxEstado].v.toString().trim() : 'Activo';
 
-                        if (parej && grup &&
-                            !parej.includes('#N/A') &&
-                            !parej.toUpperCase().includes('NOMBRE_PAREJA') &&
+                        if (parej && grup && 
+                            !parej.includes('#N/A') && 
+                            !parej.toUpperCase().includes('NOMBRE_PAREJA') && 
                             !grup.toUpperCase().includes('GRUPO') &&
                             (estado.toUpperCase() === 'ACTIVO' || estado === '')) {
+                            
                             let grupoFormateado = grup.toUpperCase().startsWith('GRUPO') ? grup.toUpperCase() : `GRUPO ${grup.toUpperCase()}`;
                             cache.parejas.push({ nombre: parej, grupo: grupoFormateado });
                         }
@@ -820,7 +910,7 @@
             if (formLogin) formLogin.classList.remove('hidden');
 
             poblarSelectsLogin();
-
+            
             const modalId = document.getElementById('identificacion-modal');
             if (modalId) modalId.classList.remove('hidden');
 
@@ -897,6 +987,9 @@
             renderClasificacion();
         }
 
+        // ==========================================
+        // RENDERIZADO DE TABLONES Y LISTAS
+        // ==========================================
         function renderPendientes() {
             const container = document.getElementById('lista-pendientes');
             if (!container) return;
@@ -912,7 +1005,7 @@
                 const rivalNorm = normalizarTexto(r.nombre);
                 const esCerrado = cache.cerrados.some(c => normalizarTexto(c) === rivalNorm);
                 const rivalDisps = cache.disponibilidades.filter(d => normalizarTexto(d.pareja) === rivalNorm);
-
+                
                 let coincide = false;
                 let fechaCoincidencia = '';
 
@@ -986,7 +1079,166 @@
 
         function renderDisponibilidades() {
             const container = document.getElementById('lista-disponibilidades');
-// ... existing code ... -->
+            if (!container) return;
+            container.innerHTML = '';
+
+            const miGrupoNorm = normalizarTexto(state.miGrupo);
+            const miParejaNorm = normalizarTexto(state.miPareja);
+            const misDisps = cache.disponibilidades.filter(d => normalizarTexto(d.pareja) === miParejaNorm);
+
+            // Filtrar y deduplicar las disponibilidades del grupo (incluyendo la propia para que ambas parejas vean lo mismo)
+            const dispsUnicas = [];
+            cache.disponibilidades.forEach(d => {
+                if (normalizarTexto(d.grupo) !== miGrupoNorm) return;
+                const fNorm = normalizarFecha(d.fecha);
+                const frNorm = normalizarFranja(d.franja);
+                const yaExiste = dispsUnicas.some(u =>
+                    normalizarTexto(u.pareja) === normalizarTexto(d.pareja) &&
+                    normalizarFecha(u.fecha) === fNorm &&
+                    normalizarFranja(u.franja) === frNorm
+                );
+                if (!yaExiste) {
+                    dispsUnicas.push(d);
+                }
+            });
+
+            if (dispsUnicas.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No hay disponibilidades publicadas aún en el grupo.</p>';
+                return;
+            }
+
+            dispsUnicas.forEach(d => {
+                const fItem = normalizarFecha(d.fecha);
+                const frItem = normalizarFranja(d.franja);
+                const esPropia = normalizarTexto(d.pareja) === miParejaNorm;
+                const esCerrado = !esPropia && cache.cerrados.some(c => normalizarTexto(c) === normalizarTexto(d.pareja));
+                const esMatch = !esPropia && misDisps.some(md => normalizarFecha(md.fecha) === fItem && normalizarFranja(md.franja) === frItem);
+
+                let cardClase = 'border-slate-700 bg-slate-900/80';
+                let nombreClase = 'text-cyan-400';
+                let badgeClase = 'bg-slate-800 text-slate-300 border-slate-700';
+
+                if (esPropia) {
+                    cardClase = 'border-cyan-500/40 bg-cyan-950/20';
+                } else if (esCerrado) {
+                    cardClase = 'border-emerald-500/70 bg-emerald-950/30';
+                    nombreClase = 'text-emerald-400';
+                    badgeClase = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+                } else if (esMatch) {
+                    cardClase = 'border-amber-500/70 bg-amber-950/30';
+                    nombreClase = 'text-amber-400';
+                    badgeClase = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                }
+
+                container.innerHTML += `
+                    <div class="p-3 rounded-xl border ${cardClase} flex justify-between items-center text-xs transition-all">
+                        <div>
+                            <span class="font-bold ${nombreClase} block">
+                                ${d.pareja} ${esPropia ? '<span class="ml-1.5 text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full font-bold">NOSOTRAS</span>' : (esCerrado ? '<span class="ml-1.5 text-[10px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full font-extrabold">CONFIRMADO</span>' : (esMatch ? '<span class="ml-1.5 text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-extrabold">¡MATCH!</span>' : ''))}
+                            </span>
+                            <span class="text-slate-300"><i class="fas fa-calendar mr-1"></i> ${fItem || d.fecha}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="${badgeClase} px-3 py-1 rounded-full font-semibold border">
+                                ${d.franja}
+                            </span>
+                            ${esMatch && !esCerrado ? `
+                                <button onclick="cerrarPartido('${d.pareja}')" class="w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow transition" title="Confirmar Match (Pasar a Verde)">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button onclick="abrirChatWith('${d.pareja}')" class="w-8 h-8 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center shadow transition" title="Abrir Chat">
+                                    <i class="fas fa-comment"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function guardarDisponibilidad() {
+            const fechaRaw = document.getElementById('input-fecha-disp').value;
+            const franja = document.getElementById('select-franja-disp').value;
+
+            if (!fechaRaw) {
+                alert("Selecciona una fecha.");
+                return;
+            }
+
+            const fecha = normalizarFecha(fechaRaw);
+            const nuevaDisp = { pareja: state.miPareja, grupo: state.miGrupo, fecha, franja, ts: Date.now() };
+
+            const yaExiste = cache.disponibilidades.some(d => 
+                normalizarTexto(d.pareja) === normalizarTexto(state.miPareja) &&
+                normalizarFecha(d.fecha) === fecha &&
+                normalizarFranja(d.franja) === normalizarFranja(franja)
+            );
+
+            if (!yaExiste) {
+                cache.disponibilidades.push(nuevaDisp);
+                localStorage.setItem('disp', JSON.stringify(cache.disponibilidades));
+            }
+
+            renderDisponibilidades();
+            renderPendientes();
+
+            const rivalesCoincidentes = cache.parejas.filter(p => 
+                normalizarTexto(p.grupo) === normalizarTexto(state.miGrupo) &&
+                normalizarTexto(p.nombre) !== normalizarTexto(state.miPareja) &&
+                cache.disponibilidades.some(d => 
+                    normalizarTexto(d.pareja) === normalizarTexto(p.nombre) &&
+                    normalizarFecha(d.fecha) === fecha &&
+                    normalizarFranja(d.franja) === normalizarFranja(franja)
+                )
+            );
+
+            if (rivalesCoincidentes.length > 0) {
+                const nombresRivales = rivalesCoincidentes.map(r => r.nombre).join(', ');
+                alert(`¡MATCH! Coincides en fecha y franja horaria con: ${nombresRivales}. Se ha habilitado el chat para acordar el partido.`);
+            } else {
+                alert("Disponibilidad publicada con éxito.");
+            }
+
+            if (!yaExiste && typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ accion: 'guardarDisponibilidad', pareja: state.miPareja, grupo: state.miGrupo, fecha, franja })
+                }).catch(e => console.log(e));
+            }
+        }
+
+        function cerrarPartido(rival) {
+            if (!cache.cerrados.some(c => normalizarTexto(c) === normalizarTexto(rival))) {
+                cache.cerrados.push(rival);
+                localStorage.setItem('cerrados', JSON.stringify(cache.cerrados));
+            }
+            const textoConfirmacion = "¡Match confirmado! Partido marcado en verde.";
+            if (!cache.chats[rival]) {
+                cache.chats[rival] = [];
+            }
+            if (!cache.chats[rival].some(m => m.mensaje === textoConfirmacion)) {
+                cache.chats[rival].push({
+                    emisor: state.miPareja,
+                    mensaje: textoConfirmacion,
+                    hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                });
+                localStorage.setItem('chats', JSON.stringify(cache.chats));
+            }
+
+            // Sincronizar la confirmación con Drive para que la otra pareja también lo vea en verde
+            if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({
+                        accion: 'guardarChat',
+                        grupo: state.miGrupo,
+                        emisor: state.miPareja,
+                        receptor: rival,
+                        mensaje: `[MATCH_CONFIRMADO] ${textoConfirmacion}`
+                    })
+                }).catch(e => console.log(e));
+            }
+
             renderDisponibilidades();
             renderPendientes();
             renderListaChats();
@@ -995,6 +1247,9 @@
             }
         }
 
+        // ==========================================
+        // SISTEMA DE CHAT
+        // ==========================================
         function abrirChatWith(rival) {
             chatActivoRival = rival;
             document.getElementById('chat-titulo-pareja').innerText = rival;
@@ -1033,7 +1288,7 @@
             if (!txt || !chatActivoRival) return;
 
             if (!cache.chats[chatActivoRival]) cache.chats[chatActivoRival] = [];
-
+            
             const msgObj = {
                 emisor: state.miPareja,
                 mensaje: txt,
@@ -1062,4 +1317,416 @@
 
         function renderListaChats() {
             const container = document.getElementById('lista-chats-activos');
-// ... existing code ... -->
+            if (!container) return;
+            container.innerHTML = '';
+
+            const clavesChats = Object.keys(cache.chats);
+            if (clavesChats.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No tienes chats ni matches abiertos aún.</p>';
+                return;
+            }
+
+            clavesChats.forEach(rival => {
+                const ultimoMsg = cache.chats[rival][cache.chats[rival].length - 1];
+                container.innerHTML += `
+                    <div onclick="abrirChatWith('${rival}')" class="p-4 bg-slate-800/80 rounded-xl border border-slate-700 flex justify-between items-center cursor-pointer hover:border-cyan-500/50 transition">
+                        <div>
+                            <h4 class="font-bold text-white text-sm">${rival}</h4>
+                            <p class="text-xs text-slate-400 truncate max-w-[200px]">${ultimoMsg ? ultimoMsg.mensaje : 'Chat iniciado'}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-cyan-400"></i>
+                    </div>
+                `;
+            });
+        }
+
+        // ==========================================
+        // CLASIFICACIÓN Y PARTIDOS
+        // ==========================================
+        function renderClasificacion() {
+            const container = document.getElementById('cuerpo-clasificacion');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const clasifOrdenada = [...cache.clasificacion].sort((a, b) => {
+                if (b.pts !== a.pts) return b.pts - a.pts;
+                return b.dif - a.dif;
+            });
+
+            clasifOrdenada.forEach((item, index) => {
+                const esMiPareja = item.pareja === state.miPareja;
+                container.innerHTML += `
+                    <tr onclick="mostrarHistorialPareja('${item.pareja}')" class="cursor-pointer hover:bg-slate-800/50 transition ${esMiPareja ? 'bg-cyan-950/40 text-cyan-300 font-bold' : ''}">
+                        <td class="px-4 py-3">${index + 1}º</td>
+                        <td class="px-4 py-3">${item.pareja}</td>
+                        <td class="px-3 py-3 text-center font-bold text-cyan-400">${item.pts}</td>
+                        <td class="px-3 py-3 text-center">${item.jg}</td>
+                        <td class="px-3 py-3 text-center">${item.jp}</td>
+                        <td class="px-3 py-3 text-center ${item.dif >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${item.dif > 0 ? '+' + item.dif : item.dif}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function mostrarHistorialPareja(nombrePareja) {
+            document.getElementById('historial-nombre-pareja').innerText = nombrePareja;
+            const container = document.getElementById('historial-lista-partidos');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const partidosPareja = cache.partidos.filter(p => p.pareja1 === nombrePareja || p.pareja2 === nombrePareja);
+
+            if (partidosPareja.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">No hay partidos jugados por esta pareja aún.</p>';
+            } else {
+                partidosPareja.forEach(p => {
+                    const gano = p.ganador === nombrePareja;
+                    container.innerHTML += `
+                        <div class="p-2.5 rounded-lg bg-slate-800 border border-slate-700 flex justify-between items-center text-xs">
+                            <div>
+                                <span class="font-bold text-white block">vs ${p.pareja1 === nombrePareja ? p.pareja2 : p.pareja1}</span>
+                                <span class="text-slate-400">${p.resultadoSets}</span>
+                            </div>
+                            <span class="font-bold px-2 py-1 rounded ${gano ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
+                                ${gano ? 'Victoria' : 'Derrota'}
+                            </span>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('modal-historial-pareja').classList.remove('hidden');
+        }
+
+        function rellenarDesplegableRivales() {
+            const select = document.getElementById('res-rival');
+            if (!select) return;
+            select.innerHTML = '';
+
+            const rivales = cache.parejas.filter(p => p.grupo === state.miGrupo && p.nombre !== state.miPareja);
+            rivales.forEach(r => {
+                select.innerHTML += `<option value="${r.nombre}">${r.nombre}</option>`;
+            });
+        }
+
+        function abrirModalResultado() {
+            rellenarDesplegableRivales();
+            document.getElementById('modal-resultado').classList.remove('hidden');
+        }
+
+        function cerrarModalResultado() {
+            document.getElementById('modal-resultado').classList.add('hidden');
+        }
+
+        function guardarResultado() {
+            const rival = document.getElementById('res-rival').value;
+            const set1 = document.getElementById('res-set1').value.trim();
+            const set2 = document.getElementById('res-set2').value.trim();
+            const set3 = document.getElementById('res-set3').value.trim();
+            const quienGano = document.getElementById('res-ganador').value;
+
+            if (!rival || !set1 || !set2) {
+                alert("Completa al menos el Set 1 y Set 2.");
+                return;
+            }
+
+            const nombreGanador = quienGano === 'Nosotras' ? state.miPareja : rival;
+            const resultadoSets = set3 ? `${set1}, ${set2}, ${set3}` : `${set1}, ${set2}`;
+
+            const partidoObj = {
+                pareja1: state.miPareja,
+                pareja2: rival,
+                resultadoSets: resultadoSets,
+                ganador: nombreGanador,
+                grupo: state.miGrupo
+            };
+
+            const indiceExistente = cache.partidos.findIndex(p => 
+                (p.pareja1.toLowerCase() === state.miPareja.toLowerCase() && p.pareja2.toLowerCase() === rival.toLowerCase()) ||
+                (p.pareja2.toLowerCase() === state.miPareja.toLowerCase() && p.pareja1.toLowerCase() === rival.toLowerCase())
+            );
+
+            if (indiceExistente !== -1) {
+                partidoPendienteGuardar = { partidoObj, indiceExistente };
+                document.getElementById('texto-confirmar-duplicado').innerText = `Ya has publicado un resultado para la pareja "${rival}". ¿Deseas modificar el resultado?`;
+                document.getElementById('modal-confirmar-duplicado').classList.remove('hidden');
+            } else {
+                ejecutarGuardadoResultado(partidoObj, false);
+            }
+        }
+
+        function ejecutarGuardadoResultado(partidoObj, esModificacion) {
+            if (esModificacion && partidoPendienteGuardar) {
+                cache.partidos[partidoPendienteGuardar.indiceExistente] = partidoObj;
+                recalcularTodaLaClasificacion();
+            } else {
+                cache.partidos.push(partidoObj);
+                actualizarRankingLocal(partidoObj);
+            }
+
+            localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
+            
+            cerrarPartido(partidoObj.pareja2);
+            cerrarModalResultado();
+            renderPartidosRegistrados();
+            renderClasificacion();
+
+            if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ accion: 'guardarResultado', ...partidoObj })
+                }).catch(e => console.log(e));
+            }
+        }
+
+        function actualizarRankingLocal(p) {
+            let jg1 = 0, jp1 = 0, jg2 = 0, jp2 = 0;
+            const sets = p.resultadoSets.split(',');
+            sets.forEach(s => {
+                const partes = s.trim().split('-');
+                if (partes.length === 2) {
+                    const a = parseInt(partes[0]) || 0;
+                    const b = parseInt(partes[1]) || 0;
+                    jg1 += a; jp1 += b;
+                    jg2 += b; jp2 += a;
+                }
+            });
+
+            const ganoP1 = p.ganador === p.pareja1;
+            const ptsP1 = ganoP1 ? (sets.length === 3 ? 3 : 4) : (sets.length === 3 ? 2 : 1);
+            const ptsP2 = ganoP1 ? (sets.length === 3 ? 2 : 1) : (sets.length === 3 ? 3 : 4);
+
+            const c1 = cache.clasificacion.find(c => c.pareja === p.pareja1);
+            if (c1) {
+                c1.pts += ptsP1;
+                c1.jg += jg1;
+                c1.jp += jp1;
+                c1.dif = c1.jg - c1.jp;
+            }
+
+            const c2 = cache.clasificacion.find(c => c.pareja === p.pareja2);
+            if (c2) {
+                c2.pts += ptsP2;
+                c2.jg += jg2;
+                c2.jp += jp2;
+                c2.dif = c2.jg - c2.jp;
+            }
+        }
+
+        function renderPartidosRegistrados() {
+            const container = document.getElementById('lista-partidos');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const misPartidos = cache.partidos.filter(p => p.pareja1 === state.miPareja || p.pareja2 === state.miPareja);
+
+            if (misPartidos.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No has registrado partidos en esta ronda.</p>';
+                return;
+            }
+
+            misPartidos.forEach(p => {
+                const gano = p.ganador === state.miPareja;
+                const rival = p.pareja1 === state.miPareja ? p.pareja2 : p.pareja1;
+
+                container.innerHTML += `
+                    <div class="p-4 bg-slate-800/80 rounded-xl border border-slate-700 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-white text-sm block">vs ${rival}</span>
+                            <span class="text-xs text-cyan-400 font-semibold">${p.resultadoSets}</span>
+                        </div>
+                        <span class="text-xs font-bold px-3 py-1 rounded-full ${gano ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}">
+                            ${gano ? 'Victoria' : 'Derrota'}
+                        </span>
+                    </div>
+                `;
+            });
+        }
+
+        // ==========================================
+        // FUNCIONES ADMIN Y PANEL
+        // ==========================================
+        function salirModoAdmin() {
+            state.rol = 'jugadora';
+            const badge = document.getElementById('badge-rol');
+            if (badge) {
+                badge.innerText = 'Jugadora';
+                badge.className = 'bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded-full font-semibold border border-slate-600';
+            }
+            cambiarPestana('inicio', document.querySelector('.tab-btn'));
+        }
+
+        function prepararPanelAdminGrupos() {
+            renderAdminListaPartidos();
+            renderAdminReasignacionGrupos();
+        }
+
+        function renderAdminListaPartidos() {
+            const container = document.getElementById('admin-lista-partidos');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (cache.partidos.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">No hay partidos registrados en esta ronda.</p>';
+                return;
+            }
+
+            cache.partidos.forEach((p, index) => {
+                container.innerHTML += `
+                    <div class="flex justify-between items-center p-3 bg-slate-800 rounded-xl border border-slate-700 text-xs mb-2">
+                        <div>
+                            <span class="font-bold text-white block">${p.pareja1} vs ${p.pareja2}</span>
+                            <span class="text-cyan-400 font-semibold">${p.resultadoSets} (Ganó: ${p.ganador})</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="editarPartidoAdmin(${index})" class="text-cyan-400 hover:text-cyan-300 bg-slate-900 p-2 rounded-lg border border-slate-700" title="Editar resultado">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
+                            <button onclick="borrarPartidoAdmin(${index})" class="text-rose-400 hover:text-rose-300 bg-slate-900 p-2 rounded-lg border border-slate-700" title="Borrar partido">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function editarPartidoAdmin(index) {
+            const p = cache.partidos[index];
+            if (!p) return;
+
+            const nuevoResultado = prompt(`Editar resultado para ${p.pareja1} vs ${p.pareja2}:`, p.resultadoSets);
+            if (nuevoResultado !== null && nuevoResultado.trim() !== '') {
+                p.resultadoSets = nuevoResultado.trim();
+
+                const nuevoGanador = prompt(`¿Quién ganó? (Escribe: "${p.pareja1}" o "${p.pareja2}")`, p.ganador);
+                if (nuevoGanador !== null && nuevoGanador.trim() !== '') {
+                    p.ganador = nuevoGanador.trim();
+                }
+
+                localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
+                recalcularTodaLaClasificacion();
+                renderAdminListaPartidos();
+                renderPartidosRegistrados();
+                renderClasificacion();
+                alert("Resultado actualizado correctamente.");
+            }
+        }
+
+        function borrarPartidoAdmin(index) {
+            if (confirm("¿Estás segura de eliminar este partido? Se recalculará la clasificación.")) {
+                cache.partidos.splice(index, 1);
+                localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
+                recalcularTodaLaClasificacion();
+                renderAdminListaPartidos();
+                renderPartidosRegistrados();
+                renderClasificacion();
+            }
+        }
+
+        function recalcularTodaLaClasificacion() {
+            cache.clasificacion.forEach(c => {
+                c.pts = 0;
+                c.jg = 0;
+                c.jp = 0;
+                c.dif = 0;
+            });
+
+            cache.partidos.forEach(p => {
+                actualizarRankingLocal(p);
+            });
+        }
+
+        function renderAdminReasignacionGrupos() {
+            const container = document.getElementById('panel-admin-grupos');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const gruposDisponibles = [...new Set(cache.parejas.map(p => p.grupo))].sort();
+            if (gruposDisponibles.length === 0) gruposDisponibles.push('GRUPO A', 'GRUPO B', 'GRUPO C');
+
+            cache.parejas.forEach((p, idx) => {
+                let opciones = gruposDisponibles.map(g => 
+                    `<option value="${g}" ${p.grupo === g ? 'selected' : ''}>${g}</option>`
+                ).join('');
+
+                container.innerHTML += `
+                    <div class="flex justify-between items-center p-2.5 bg-slate-800/80 rounded-xl border border-slate-700 text-xs">
+                        <span class="font-semibold text-slate-200 truncate max-w-[50%]">${p.nombre}</span>
+                        <select id="select-grupo-pareja-${idx}" data-pareja="${p.nombre}" class="bg-slate-900 border border-slate-700 text-cyan-400 p-2 rounded-lg outline-none font-bold">
+                            ${opciones}
+                        </select>
+                    </div>
+                `;
+            });
+        }
+
+        function vaciarChatsYDisponibilidades() {
+            if (confirm("¿Segura que deseas vaciar todas las disponibilidades y chats?")) {
+                cache.disponibilidades = [];
+                cache.chats = {};
+                cache.matches = [];
+                cache.cerrados = [];
+                localStorage.removeItem('disp');
+                localStorage.removeItem('chats');
+                localStorage.removeItem('matches');
+                localStorage.removeItem('cerrados');
+
+                renderizarTodo();
+
+                if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                    fetch(URL_GOOGLE_SCRIPT, {
+                        method: 'POST', mode: 'no-cors',
+                        body: JSON.stringify({ accion: 'vaciarChatsYDisponibilidades' })
+                    }).catch(e => console.log(e));
+                }
+                alert("Se han borrado los chats y disponibilidades correctamente.");
+            }
+        }
+
+        function iniciarSiguienteRonda() {
+            const fIni = document.getElementById('admin-ronda-inicio').value;
+            const fFin = document.getElementById('admin-ronda-fin').value;
+
+            if (!fIni || !fFin) {
+                alert("Por favor selecciona las fechas de la nueva ronda.");
+                return;
+            }
+
+            const asignaciones = [];
+            cache.parejas.forEach((p, idx) => {
+                const el = document.getElementById(`select-grupo-pareja-${idx}`);
+                if (el) {
+                    const nuevoGrupo = el.value;
+                    p.grupo = nuevoGrupo;
+                    asignaciones.push({ nombre: p.nombre, nuevoGrupo: nuevoGrupo });
+                }
+            });
+
+            if (confirm("¿Deseas iniciar la siguiente ronda con las asignaciones de grupo seleccionadas? Se archivará la ronda actual.")) {
+                cache.disponibilidades = [];
+                cache.chats = {};
+                cache.matches = [];
+                cache.cerrados = [];
+                cache.partidos = [];
+                localStorage.clear();
+
+                if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                    fetch(URL_GOOGLE_SCRIPT, {
+                        method: 'POST', mode: 'no-cors',
+                        body: JSON.stringify({
+                            accion: 'cambiarRonda',
+                            fechaInicio: fIni,
+                            fechaFin: fFin,
+                            asignaciones: asignaciones
+                        })
+                    }).catch(e => console.log(e));
+                }
+
+                alert("Siguiente ronda iniciada con éxito. Se recargará la aplicación.");
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
