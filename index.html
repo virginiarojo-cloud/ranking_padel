@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ranking Pádel Norte</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            background-color: #0f172a; /* Slate 900 */
+            color: #f8fafc;
+        }
+
+        /* Colores principales: Azul pista, Turquesa y un toque Magenta */
+        .bg-pista { background: linear-gradient(135deg, #0284c7, #06b6d4); } /* Sky to Cyan */
+        .text-pista { color: #0ea5e9; }
+        .border-pista { border-color: #0ea5e9; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #0284c7, #06b6d4);
+            color: white;
+            font-weight: 600;
+            border-radius: 9999px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:active { transform: scale(0.95); opacity: 0.9; }
+
+        .btn-magenta {
+            background: linear-gradient(135deg, #d946ef, #c026d3);
+            color: white;
+            font-weight: 600;
+            border-radius: 9999px;
+            transition: all 0.3s ease;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7); /* Slate 800 */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+        }
+
+        .tab-btn.active {
+            color: #0ea5e9;
+            border-bottom: 3px solid #0ea5e9;
+        }
+        
+        /* Ocultar barra de scroll */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- PANTALLA INICIAL: IDENTIFICACIÓN OBLIGATORIA -->
+    <div id="identificacion-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 bg-opacity-95 backdrop-blur-md">
+        <div class="glass-card p-8 w-11/12 max-w-md text-center transform transition-all scale-100">
+            <div class="w-20 h-20 mx-auto bg-pista rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(6,182,212,0.4)]">
+                <i class="fas fa-table-tennis text-4xl text-white"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-cyan-300">Bienvenida</h2>
+            <p class="text-slate-400 mb-8">Selecciona tu grupo y pareja para entrar</p>
+            
+            <div id="loading-datos" class="text-cyan-400 mb-4 animate-pulse">
+                <i class="fas fa-spinner fa-spin mr-2"></i> Conectando con Drive...
+            </div>
+
+            <div id="form-login" class="hidden">
+                <select id="login-grupo" class="w-full p-4 rounded-xl bg-slate-700/50 border border-slate-600 text-white font-semibold text-lg focus:ring-2 focus:ring-cyan-400 outline-none transition-all mb-4">
+                    <option value="" disabled selected>Elige grupo</option>
+                </select>
+                
+                <select id="login-pareja" class="w-full p-4 rounded-xl bg-slate-700/50 border border-slate-600 text-white font-semibold text-lg focus:ring-2 focus:ring-cyan-400 outline-none transition-all mb-6">
+                    <option value="" disabled selected>Elige pareja</option>
+                </select>
+                
+                <button onclick="guardarSeleccionPareja()" class="btn-primary w-full py-4 text-lg shadow-lg shadow-cyan-500/30">
+                    Entrar a la App
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CABECERA SUPERIOR (Header) -->
+    <header class="glass-card m-4 p-4 shadow-lg rounded-2xl shrink-0 z-10 relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-32 h-32 bg-cyan-500 rounded-full blur-3xl opacity-20"></div>
+        
+        <!-- Fila 1: Título, Rol y Botón Admin -->
+        <div class="flex justify-between items-center mb-3">
+            <h1 class="text-xl font-extrabold tracking-tight">RANKING <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-cyan-300">NORTE</span></h1>
+            <div class="flex items-center space-x-3">
+                <span id="badge-rol" class="bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded-full font-semibold border border-slate-600">Jugadora</span>
+                <!-- BOTÓN TUERCA ADMIN CON EVENTO DIRECTO ONCLICK -->
+                <button type="button" id="btn-tuerca-admin" onclick="abrirModalAdminPIN()" class="text-cyan-400 hover:text-cyan-300 transition-colors p-2 text-2xl cursor-pointer relative z-30" title="Acceso Administradora">
+                    <i class="fas fa-cog pointer-events-none"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Fila 2: Grupo y Pareja Actual -->
+        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
+            <div class="flex flex-col">
+                <span class="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1">Grupo Actual</span>
+                <div class="text-cyan-400 font-bold text-lg" id="header-grupo">--</div>
+            </div>
+            <div class="flex flex-col sm:text-right">
+                <span class="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-1">Tu Pareja</span>
+                <div class="text-white font-bold text-lg" id="header-pareja">--</div>
+            </div>
+        </div>
+        
+        <!-- Ronda info -->
+        <div class="mt-3 flex items-center text-xs text-slate-400">
+            <i class="fas fa-calendar-alt mr-2 text-cyan-400"></i>
+            <span>Ronda en curso: <span id="info-ronda" class="text-white font-semibold">Cargando...</span></span>
+        </div>
+    </header>
+
+    <!-- ÁREA DE CONTENIDO (Scrollable) -->
+    <main class="flex-1 overflow-y-auto px-4 pb-24 relative z-0">
+        
+        <!-- PESTAÑA: INICIO (Disponibilidad y Matches) -->
+        <div id="tab-inicio" class="tab-content block animate-fade-in space-y-6">
+            
+            <!-- TARJETA: DISPONIBILIDAD -->
+            <div class="glass-card p-5 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-sky-500 rounded-full blur-3xl opacity-10"></div>
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-clock text-sky-400 mr-2"></i> Nuestra Disponibilidad
+                </h3>
+                
+                <div class="space-y-4 relative z-10">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-slate-400 text-sm mb-2">Día:</label>
+                            <input type="date" id="input-fecha-disp" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white focus:ring-2 focus:ring-cyan-400 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 text-sm mb-2">Franja horaria:</label>
+                            <select id="select-franja-disp" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white focus:ring-2 focus:ring-cyan-400 outline-none">
+                                <option value="9:00 - 12:00">9:00 - 12:00</option>
+                                <option value="12:00 - 15:00">12:00 - 15:00</option>
+                                <option value="15:00 - 17:00">15:00 - 17:00</option>
+                                <option value="18:00 - 20:00">18:00 - 20:00</option>
+                                <option value="20:00 - 24:00">20:00 - 24:00</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="guardarDisponibilidad()" class="btn-primary w-full py-4 text-lg mt-4 shadow-lg shadow-cyan-500/30">
+                        <i class="fas fa-paper-plane mr-2"></i> Publicar nuestra Disponibilidad
+                    </button>
+                </div>
+            </div>
+
+            <!-- TARJETA: TABLÓN DE DISPONIBILIDADES DEL GRUPO -->
+            <div class="glass-card p-5">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-calendar-check text-cyan-400 mr-2"></i> Tablón de Disponibilidad (Grupo)
+                </h3>
+                <div id="lista-disponibilidades" class="space-y-3">
+                    <!-- Se rellena JS -->
+                </div>
+            </div>
+
+            <!-- TARJETA: ESTADO DE PAREJAS DEL GRUPO -->
+            <div class="glass-card p-5">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-users text-rose-400 mr-2"></i> Parejas del Grupo
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">Contacta para quedar. En rojo las parejas con las que aún no has hablado.</p>
+                <div id="lista-pendientes" class="space-y-0">
+                    <!-- Se rellena JS -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- PESTAÑA: MATCH & CHAT -->
+        <div id="tab-chats" class="tab-content hidden animate-fade-in space-y-6">
+            <div class="glass-card p-5">
+                <h3 class="text-lg font-bold mb-4 flex items-center">
+                    <i class="fas fa-comments text-cyan-400 mr-2"></i> Nuestros Chats y Matches
+                </h3>
+                <div id="lista-chats-activos" class="space-y-3">
+                    <!-- JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA: CLASIFICACIÓN -->
+        <div id="tab-clasificacion" class="tab-content hidden animate-fade-in">
+            <div class="glass-card overflow-hidden">
+                <div class="bg-slate-800/80 p-4 border-b border-slate-700 flex justify-between items-center">
+                    <h3 class="font-bold text-lg"><i class="fas fa-trophy text-cyan-400 mr-2"></i> Clasificación</h3>
+                    <button onclick="document.getElementById('modal-baremo').classList.remove('hidden')" class="bg-slate-700 p-2 rounded-full text-slate-300 hover:text-white transition">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-slate-400 bg-slate-900/50 uppercase border-b border-slate-700">
+                            <tr>
+                                <th class="px-4 py-3">Pos</th>
+                                <th class="px-4 py-3">Pareja</th>
+                                <th class="px-3 py-3 text-center">Pts</th>
+                                <th class="px-3 py-3 text-center">JG</th>
+                                <th class="px-3 py-3 text-center">JP</th>
+                                <th class="px-3 py-3 text-center">DIF</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpo-clasificacion" class="divide-y divide-slate-700/50">
+                            <!-- JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA: PARTIDOS -->
+        <div id="tab-partidos" class="tab-content hidden animate-fade-in space-y-6">
+            <button onclick="abrirModalResultado()" class="btn-magenta w-full py-4 rounded-xl shadow-lg shadow-magenta-500/30 font-bold text-lg">
+                <i class="fas fa-plus-circle mr-2"></i> Registrar Resultado
+            </button>
+
+            <div class="glass-card p-5 mt-6">
+                <h3 class="font-bold text-lg mb-4"><i class="fas fa-history text-cyan-400 mr-2"></i> Últimos Resultados</h3>
+                <div id="lista-partidos" class="space-y-4">
+                    <!-- JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA: ADMIN (Oculta por defecto) -->
+        <div id="tab-admin" class="tab-content hidden animate-fade-in space-y-6">
+            <div class="glass-card p-5 border border-rose-500/30">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-rose-400 flex items-center">
+                        <i class="fas fa-shield-alt mr-2"></i> Zona Administradora
+                    </h3>
+                    <button onclick="salirModoAdmin()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-slate-600">
+                        Volver a Jugadora
+                    </button>
+                </div>
+                
+                <p class="text-sm text-slate-400 mb-6">Gestión completa de rondas, ajuste de resultados registrados y limpieza de conversaciones y disponibilidades.</p>
+
+                <!-- BOTÓN DE LIMPIEZA RÁPIDA DE CHATS Y DISPONIBILIDADES -->
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 mb-6">
+                    <h4 class="font-bold text-white text-sm mb-2"><i class="fas fa-trash-alt text-rose-400 mr-2"></i> Limpieza de Chats y Disponibilidades</h4>
+                    <p class="text-xs text-slate-400 mb-4">Borra todas las conversaciones y disponibilidades publicadas para que todas las parejas inicien en blanco.</p>
+                    <button onclick="vaciarChatsYDisponibilidades()" class="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 font-bold text-white text-sm transition">
+                        <i class="fas fa-broom mr-2"></i> Borrar Chats y Disponibilidades
+                    </button>
+                </div>
+
+                <!-- SECCIÓN DE AJUSTE DE PARTIDOS REGISTRADOS -->
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 mb-6">
+                    <h4 class="font-bold text-white text-sm mb-2"><i class="fas fa-edit text-cyan-400 mr-2"></i> Corrección de Partidos / Resultados</h4>
+                    <div id="admin-lista-partidos" class="space-y-2 max-h-48 overflow-y-auto">
+                        <!-- JS inserta partidos para borrar o editar -->
+                    </div>
+                </div>
+
+                <!-- SECCIÓN DE ASIGNACIÓN DE GRUPOS Y ASCENSOS/DESCENSOS -->
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 mb-6">
+                    <h4 class="font-bold text-white text-sm mb-2"><i class="fas fa-users-cog text-cyan-400 mr-2"></i> Reasignar Grupos (Nueva Ronda)</h4>
+                    <p class="text-xs text-slate-400 mb-3">Asigna los nuevos grupos a las parejas para la siguiente ronda (ascensos/descensos):</p>
+                    <div id="panel-admin-grupos" class="space-y-3 max-h-56 overflow-y-auto">
+                        <!-- JS rellena esto con desplegables de grupo por pareja -->
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 mb-6">
+                    <label class="block text-slate-400 text-sm mb-2">Fecha Próxima Ronda (Estado: ACTIVA):</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="date" id="admin-ronda-inicio" class="w-full p-3 rounded-lg bg-slate-800 text-white outline-none">
+                        <input type="date" id="admin-ronda-fin" class="w-full p-3 rounded-lg bg-slate-800 text-white outline-none">
+                    </div>
+                </div>
+
+                <button onclick="iniciarSiguienteRonda()" class="w-full py-4 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 font-bold text-white shadow-lg shadow-rose-500/30">
+                    <i class="fas fa-forward mr-2"></i> INICIAR SIGUIENTE RONDA
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- NAVEGACIÓN INFERIOR (Bottom Bar) -->
+    <nav class="fixed bottom-0 w-full glass-card border-t border-slate-700 pb-safe z-40 rounded-none rounded-t-3xl">
+        <div class="flex justify-around items-center h-20 px-2">
+            <button class="tab-btn active flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors text-slate-400" onclick="cambiarPestana('inicio', this)">
+                <i class="fas fa-home text-xl"></i>
+                <span class="text-[10px] uppercase font-bold tracking-wider">Inicio</span>
+            </button>
+            <button class="tab-btn flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors text-slate-400" onclick="cambiarPestana('chats', this)">
+                <i class="fas fa-comments text-xl"></i>
+                <span class="text-[10px] uppercase font-bold tracking-wider">Chat</span>
+            </button>
+            <button class="tab-btn flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors text-slate-400" onclick="cambiarPestana('clasificacion', this)">
+                <i class="fas fa-trophy text-xl"></i>
+                <span class="text-[10px] uppercase font-bold tracking-wider">Ranking</span>
+            </button>
+            <button class="tab-btn flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors text-slate-400" onclick="cambiarPestana('partidos', this)">
+                <i class="fas fa-check-circle text-xl"></i>
+                <span class="text-[10px] uppercase font-bold tracking-wider">Partidos</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MODALES VARIOS -->
+    <!-- Modal Baremo (Info) -->
+    <div id="modal-baremo" class="fixed inset-0 z-50 hidden flex justify-center items-center bg-slate-900/90 backdrop-blur-sm p-4">
+        <div class="glass-card p-6 w-full max-w-sm relative">
+            <button onclick="document.getElementById('modal-baremo').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-xl font-bold mb-4 text-cyan-400">PUNTUACIÓN Y BAREMO</h3>
+            
+            <div class="text-sm text-slate-300 space-y-3">
+                <p><strong>Partido Ganado en 2 sets:</strong> 4 ptos.</p>
+                <p><strong>Partido Ganado en 3 sets:</strong> 3 ptos.</p>
+                <p><strong>Partido Perdido en 3 sets:</strong> 2 ptos.</p>
+                <p><strong>Partido Perdido en 2 sets:</strong> 1 pto.</p>
+                <hr class="border-slate-700">
+                <p><strong>Partido no finalizado:</strong></p>
+                <ul class="list-disc pl-5">
+                    <li>2º set sin finalizar: 1 punto para cada pareja.</li>
+                    <li>2 sets finalizados, cada pareja gana uno: 2 puntos para cada pareja.</li>
+                </ul>
+                <hr class="border-slate-700">
+                <p class="text-cyan-400 font-bold">CRITERIO DE CLASIFICACIÓN:</p>
+                <ol class="list-decimal pl-5">
+                    <li>Puntos (Pts)</li>
+                    <li>Diferencia de juegos (DIF)</li>
+                    <li>Enfrentamiento directo</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ver Partidos de Pareja en Ranking -->
+    <div id="modal-historial-pareja" class="fixed inset-0 z-50 hidden flex justify-center items-center bg-slate-900/90 backdrop-blur-sm p-4">
+        <div class="glass-card p-6 w-full max-w-sm relative">
+            <button onclick="document.getElementById('modal-historial-pareja').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-lg font-bold mb-1 text-cyan-400" id="historial-nombre-pareja">Pareja</h3>
+            <p class="text-xs text-slate-400 mb-4">Historial de partidos en esta ronda:</p>
+            <div id="historial-lista-partidos" class="space-y-2 max-h-60 overflow-y-auto text-sm">
+                <!-- JS inserta partidos de la pareja -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registrar Resultado -->
+    <div id="modal-resultado" class="fixed inset-0 z-50 hidden flex items-end justify-center bg-slate-900/80 backdrop-blur-sm transition-opacity">
+        <div class="glass-card w-full max-w-md p-6 rounded-t-3xl rounded-b-none border-b-0 transform translate-y-0 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">Registrar Partido</h3>
+                <button onclick="cerrarModalResultado()" class="text-slate-400 p-2"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Rival</label>
+                    <select id="res-rival" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none focus:border-cyan-400"></select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Resultado Set 1</label>
+                        <input type="text" id="res-set1" value="0-0" placeholder="Ej: 6-4" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none text-center font-bold tracking-widest focus:border-cyan-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Resultado Set 2</label>
+                        <input type="text" id="res-set2" value="0-0" placeholder="Ej: 4-6" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none text-center font-bold tracking-widest focus:border-cyan-400">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Resultado Set 3 (Opcional)</label>
+                    <input type="text" id="res-set3" placeholder="Ej: 6-2 o vacío" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none text-center font-bold tracking-widest focus:border-cyan-400">
+                </div>
+
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">¿Quién ganó?</label>
+                    <select id="res-ganador" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none focus:border-cyan-400">
+                        <option value="Nosotras">Nosotras</option>
+                        <option value="Rival">Rival</option>
+                    </select>
+                </div>
+
+                <button onclick="guardarResultado()" class="btn-primary w-full py-4 mt-4">Guardar Resultado</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Admin PIN -->
+    <div id="modal-admin-pin" class="fixed inset-0 z-50 hidden flex justify-center items-center bg-slate-900/90 backdrop-blur-sm p-4">
+        <div class="glass-card p-6 w-full max-w-xs text-center">
+            <h3 class="text-lg font-bold mb-4 text-white">Acceso Administradora</h3>
+            <input type="password" id="admin-pin" placeholder="PIN de acceso" class="w-full p-3 mb-4 rounded-xl bg-slate-900 border border-slate-700 text-center text-white outline-none focus:border-cyan-400">
+            <div class="flex space-x-3">
+                <button type="button" id="btn-cancelar-pin" class="flex-1 p-3 rounded-xl bg-slate-700 text-white font-semibold">Cancelar</button>
+                <button type="button" id="btn-entrar-pin" class="flex-1 p-3 rounded-xl btn-primary font-semibold">Entrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRMACIÓN DE DUPLICADOS (NUEVO REEMPLAZO DE CONFIRM NATIVO) -->
+    <div id="modal-confirmar-duplicado" class="fixed inset-0 z-50 hidden flex justify-center items-center bg-slate-900/90 backdrop-blur-sm p-4">
+        <div class="glass-card p-6 w-full max-w-sm text-center">
+            <div class="w-12 h-12 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center mb-4 text-amber-400 text-2xl">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Partido ya registrado</h3>
+            <p id="texto-confirmar-duplicado" class="text-sm text-slate-300 mb-6"></p>
+            <div class="flex space-x-3">
+                <button type="button" id="btn-duplicado-no" class="flex-1 p-3 rounded-xl bg-slate-700 text-white font-semibold hover:bg-slate-600 transition">Cancelar</button>
+                <button type="button" id="btn-duplicado-si" class="flex-1 p-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition">Sí, Modificar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chat Activo -->
+    <div id="modal-chat-sala" class="fixed inset-0 z-50 hidden flex flex-col bg-slate-900 pb-safe">
+        <!-- Header del chat -->
+        <div class="glass-card rounded-none p-4 flex items-center justify-between shadow-md shrink-0">
+            <div class="flex items-center">
+                <button onclick="cerrarChatSala()" class="text-slate-400 hover:text-white mr-4 p-2">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <div class="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center mr-3 border border-cyan-500/50">
+                    <i class="fas fa-user-friends text-cyan-400"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-sm" id="chat-titulo-pareja">Pareja Rival</h3>
+                    <p class="text-xs text-cyan-400">Chat del partido</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensajes -->
+        <div id="chat-mensajes" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-900/50">
+            <!-- Mensajes JS -->
+        </div>
+
+        <!-- Input Box -->
+        <div class="glass-card rounded-none border-t border-slate-700 p-3 flex items-center shrink-0 mb-4">
+            <input type="text" id="chat-input" placeholder="Escribe un mensaje..." class="flex-1 p-3 rounded-full bg-slate-800 text-white outline-none border border-slate-700 focus:border-cyan-400 transition-colors text-sm">
+            <button onclick="enviarMensajeChat()" class="w-12 h-12 rounded-full bg-pista text-white ml-2 flex items-center justify-center shadow-lg shadow-cyan-500/30 transform transition hover:scale-105">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN DE CONEXIÓN
+        const SHEET_ID = '1dazI73BA8aUMa_RNFH_Ovh_ZJsDMu1i71we47xF0xHU'; 
+        const URL_GOOGLE_SCRIPT = ''; 
+
+        // ESTADO GLOBAL
+        const state = {
+            miGrupo: '',
+            miPareja: '',
+            rol: 'jugadora',
+            rondaActiva: 'Cargando...'
+        };
+
+        const cache = {
+            clasificacion: [],
+            parejas: [],
+            disponibilidades: JSON.parse(localStorage.getItem('disp')) || [],
+            matches: JSON.parse(localStorage.getItem('matches')) || [],
+            cerrados: JSON.parse(localStorage.getItem('cerrados')) || [], 
+            chats: JSON.parse(localStorage.getItem('chats')) || {}, 
+            partidos: JSON.parse(localStorage.getItem('partidos_registrados')) || []
+        };
+
+        let chatActivoRival = null;
+        let partidoPendienteGuardar = null;
+
+        // CONFIGURACIÓN DE EVENTOS ADMIN
+        function configurarEventosAdmin() {
+            const btnCancelar = document.getElementById('btn-cancelar-pin');
+            const btnEntrar = document.getElementById('btn-entrar-pin');
+            const inputPin = document.getElementById('admin-pin');
+            
+            if (btnCancelar) {
+                btnCancelar.onclick = cerrarModalAdminPIN;
+            }
+            if (btnEntrar) {
+                btnEntrar.onclick = procesarPinAdmin;
+            }
+            if (inputPin) {
+                inputPin.onkeypress = (e) => {
+                    if (e.key === 'Enter') procesarPinAdmin();
+                };
+            }
+
+            // Modal duplicados
+            const btnDupSi = document.getElementById('btn-duplicado-si');
+            const btnDupNo = document.getElementById('btn-duplicado-no');
+            if (btnDupSi) {
+                btnDupSi.onclick = () => {
+                    document.getElementById('modal-confirmar-duplicado').classList.add('hidden');
+                    if (partidoPendienteGuardar) {
+                        ejecutarGuardadoResultado(partidoPendienteGuardar.partidoObj, true);
+                        partidoPendienteGuardar = null;
+                    }
+                };
+            }
+            if (btnDupNo) {
+                btnDupNo.onclick = () => {
+                    document.getElementById('modal-confirmar-duplicado').classList.add('hidden');
+                    partidoPendienteGuardar = null;
+                };
+            }
+        }
+
+        function abrirModalAdminPIN() {
+            const pinInput = document.getElementById('admin-pin');
+            if (pinInput) pinInput.value = '';
+            const modal = document.getElementById('modal-admin-pin');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function cerrarModalAdminPIN() {
+            const modal = document.getElementById('modal-admin-pin');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function procesarPinAdmin() {
+            const pinInput = document.getElementById('admin-pin');
+            const pin = pinInput ? pinInput.value.trim() : '';
+
+            if (pin === '1234') {
+                cerrarModalAdminPIN();
+                state.rol = 'admin';
+                const badge = document.getElementById('badge-rol');
+                if (badge) {
+                    badge.innerText = 'Administradora';
+                    badge.className = 'bg-rose-600 text-white text-xs px-3 py-1 rounded-full font-bold border border-rose-500 animate-pulse';
+                }
+                prepararPanelAdminGrupos();
+                cambiarPestana('admin', null);
+            } else {
+                alert('PIN incorrecto. El PIN por defecto es 1234.');
+            }
+        }
+
+        // INICIALIZACIÓN DE FUNCIONES PRINCIPALES Y DATOS
+        function cargarDatosDesdeDrive() {
+            const loading = document.getElementById('loading-datos');
+            const formLogin = document.getElementById('form-login');
+
+            // Cargar local storage previo si existe
+            const expGrupo = localStorage.getItem('miGrupo');
+            const expPareja = localStorage.getItem('miPareja');
+            if (expGrupo) state.miGrupo = expGrupo;
+            if (expPareja) state.miPareja = expPareja;
+
+            if (typeof SHEET_ID !== 'undefined' && SHEET_ID && SHEET_ID !== '') {
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+                fetch(url)
+                    .then(r => r.text())
+                    .then(text => {
+                        try {
+                            const json = JSON.parse(text.substring(47, text.length - 2));
+                            procesarDatosDrive(json);
+                        } catch(e) {
+                            usarDatosSimulados();
+                        }
+                    })
+                    .catch(() => usarDatosSimulados());
+            } else {
+                usarDatosSimulados();
+            }
+        }
+
+        // NAVEGACIÓN DE PESTAÑAS
+        function cambiarPestana(nombrePestana, elementoBtn) {
+            // Ocultar todas las pestañas
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            
+            // Quitar clase active de todos los botones de navegación
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('active', 'text-cyan-400');
+                b.classList.add('text-slate-400');
+            });
+
+            // Mostrar la pestaña seleccionada
+            const tabSeleccionada = document.getElementById(`tab-${nombrePestana}`);
+            if (tabSeleccionada) {
+                tabSeleccionada.classList.remove('hidden');
+            }
+
+            // Marcar botón como activo
+            if (elementoBtn) {
+                elementoBtn.classList.add('active', 'text-cyan-400');
+                elementoBtn.classList.remove('text-slate-400');
+            }
+
+            // Renderizado específico según la pestaña activa
+            if (nombrePestana === 'inicio') {
+                renderPendientes();
+                renderDisponibilidades();
+            } else if (nombrePestana === 'chats') {
+                renderListaChats();
+            } else if (nombrePestana === 'clasificacion') {
+                renderClasificacion();
+            } else if (nombrePestana === 'partidos') {
+                rellenarDesplegableRivales();
+                renderPartidosRegistrados();
+            }
+        }
+
+        // INICIALIZACIÓN
+        window.onload = () => {
+            configurarEventosAdmin();
+            cargarDatosDesdeDrive();
+            
+            // Garantizar que la tuerca capture el clic incluso si hay librerías o modales bloqueando
+            const btnTuerca = document.getElementById('btn-tuerca-admin');
+            if (btnTuerca) {
+                btnTuerca.removeEventListener('click', abrirModalAdminPIN);
+                btnTuerca.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    abrirModalAdminPIN();
+                });
+            }
+        };
+
+        // ==========================================
+        // CARGA DE DATOS Y CONEXIÓN DRIVE
+        // ==========================================
+        function cargarDatosDesdeDrive() {
+            const loading = document.getElementById('loading-datos');
+            const formLogin = document.getElementById('form-login');
+
+            // Cargar local storage previo si existe
+            const expGrupo = localStorage.getItem('miGrupo');
+            const expPareja = localStorage.getItem('miPareja');
+            if (expGrupo) state.miGrupo = expGrupo;
+            if (expPareja) state.miPareja = expPareja;
+
+            if (typeof SHEET_ID !== 'undefined' && SHEET_ID && SHEET_ID !== '') {
+                // Forzar la consulta explícitamente a la pestaña 'Parejas' con gid=1 para evitar que lea 'Usuarios_Roles'
+                cargarDesdePestanaParejas();
+            } else {
+                alert("No se ha configurado el ID de Google Sheet.");
+            }
+        }
+
+        function cargarDesdePestanaParejas() {
+            // Se añade gid=1 y sheet=Parejas para forzar a Google Sheets a devolver la segunda pestaña (Parejas)
+            const urlAlt = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=1&sheet=Parejas&tqx=out:json`;
+            fetch(urlAlt)
+                .then(r => r.text())
+                .then(text => {
+                    const startIdx = text.indexOf('{');
+                    const endIdx = text.lastIndexOf('}');
+                    if (startIdx !== -1 && endIdx !== -1) {
+                        const jsonText = text.substring(startIdx, endIdx + 1);
+                        const json = JSON.parse(jsonText);
+                        procesarDatosDrive(json);
+                    }
+                })
+                .catch(e => {
+                    console.error("Error al cargar pestaña Parejas:", e);
+                    const urlFallback = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq=select%20*&sheet=Parejas&tqx=out:json`;
+                    fetch(urlFallback)
+                        .then(r => r.text())
+                        .then(text => {
+                            const startIdx = text.indexOf('{');
+                            const endIdx = text.lastIndexOf('}');
+                            if (startIdx !== -1 && endIdx !== -1) {
+                                const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+                                procesarDatosDrive(json);
+                            }
+                        }).catch(err => console.error("Error en fallback:", err));
+                });
+
+            // Cargar datos de la pestaña Rondas para obtener la fecha de la ronda activa (Cols D, E, F)
+            cargarFechasRondaActiva();
+        }
+
+        function cargarFechasRondaActiva() {
+            const urlRondas = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Rondas&tqx=out:json`;
+            fetch(urlRondas)
+                .then(r => r.text())
+                .then(text => {
+                    const startIdx = text.indexOf('{');
+                    const endIdx = text.lastIndexOf('}');
+                    if (startIdx !== -1 && endIdx !== -1) {
+                        const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+                        if (json && json.table && json.table.rows) {
+                            json.table.rows.forEach(r => {
+                        if (r.c) {
+                            // Col D (idx 3): Fecha Inicio, Col E (idx 4): Fecha Fin, Col F (idx 5): Estado
+                            const estado = r.c[5] && r.c[5].v ? r.c[5].v.toString().toUpperCase().trim() : '';
+                            if (estado === 'ACTIVA') {
+                                const fIni = r.c[3] && r.c[3].f ? r.c[3].f : (r.c[3] && r.c[3].v ? r.c[3].v.toString() : '');
+                                const fFin = r.c[4] && r.c[4].f ? r.c[4].f : (r.c[4] && r.c[4].v ? r.c[4].v.toString() : '');
+                                if (fIni || fFin) {
+                                    state.rondaActiva = `${fIni} al ${fFin}`;
+                                    const elemInfo = document.getElementById('info-ronda');
+                                    if (elemInfo) elemInfo.innerText = state.rondaActiva;
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        })
+        .catch(e => console.log("No se pudo cargar la fecha de la ronda activa:", e));
+}
+
+function sincronizarDatosDriveExtras() {
+    // Refuerzo de sincronización: traer disponibilidades y partidos desde Google Sheets si existen
+    const urlDisp = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Disponibilidad&tqx=out:json`;
+    fetch(urlDisp)
+        .then(r => r.text())
+        .then(text => {
+            const startIdx = text.indexOf('{');
+            const endIdx = text.lastIndexOf('}');
+            if (startIdx !== -1 && endIdx !== -1) {
+                const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+                if (json && json.table && json.table.rows) {
+                    const dispDrive = [];
+                    json.table.rows.forEach(r => {
+                        if (r.c && r.c[1] && r.c[2] && r.c[3] && r.c[4]) {
+                            const pareja = r.c[1].v ? r.c[1].v.toString().trim() : '';
+                            const grupo = r.c[2].v ? r.c[2].v.toString().trim() : '';
+                            const fecha = r.c[3].f ? r.c[3].f : (r.c[3].v ? r.c[3].v.toString().trim() : '');
+                            const franja = r.c[4].v ? r.c[4].v.toString().trim() : '';
+                            if (pareja && fecha && !pareja.toLowerCase().includes('pareja')) {
+                                dispDrive.push({ pareja, grupo, fecha, franja });
+                            }
+                        }
+                    });
+                    if (dispDrive.length > 0) {
+                        cache.disponibilidades = dispDrive;
+                        localStorage.setItem('disp', JSON.stringify(cache.disponibilidades));
+                        if (state.miPareja) {
+                            renderDisponibilidades();
+                            renderPendientes();
+                        }
+                    }
+                }
+            }
+        }).catch(() => {});
+
+    const urlPartidos = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Partidos&tqx=out:json`;
+    fetch(urlPartidos)
+        .then(r => r.text())
+        .then(text => {
+            const startIdx = text.indexOf('{');
+            const endIdx = text.lastIndexOf('}');
+            if (startIdx !== -1 && endIdx !== -1) {
+                const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+                if (json && json.table && json.table.rows) {
+                    const partDrive = [];
+                    json.table.rows.forEach(r => {
+                        if (r.c && r.c[3] && r.c[4] && r.c[5]) {
+                            const grupo = r.c[2] && r.c[2].v ? r.c[2].v.toString().trim() : '';
+                            const pareja1 = r.c[3].v ? r.c[3].v.toString().trim() : '';
+                            const pareja2 = r.c[4].v ? r.c[4].v.toString().trim() : '';
+                            const resultadoSets = r.c[5].v ? r.c[5].v.toString().trim() : '';
+                            const ganador = r.c[6] && r.c[6].v ? r.c[6].v.toString().trim() : '';
+                            if (pareja1 && pareja2 && !pareja1.toLowerCase().includes('pareja')) {
+                                partDrive.push({ grupo, pareja1, pareja2, resultadoSets, ganador });
+                            }
+                        }
+                    });
+                    if (partDrive.length > 0) {
+                        cache.partidos = partDrive;
+                        localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
+                        if (state.miPareja) {
+                            recalcularTodaLaClasificacion();
+                            renderClasificacion();
+                            renderPartidosRegistrados();
+                        }
+                    }
+                }
+            }
+        }).catch(() => {});
+}
+
+function procesarDatosDrive(json) {
+            cache.parejas = [];
+            if (json && json.table && json.table.rows) {
+                const cols = json.table.cols || [];
+                
+                // Mapeo exacto de las columnas de la pestaña Parejas según tu Google Sheet:
+                // Columna D (3): Nombre_Pareja
+                // Columna F (5): Grupo
+                // Columna G (6): Estado
+                let idxPareja = 3; 
+                let idxGrupo = 5;
+                let idxEstado = 6;
+
+                // Si Google Sheets envía los nombres de las columnas en la primera fila o encabezados:
+                cols.forEach((c, idx) => {
+                    if (c && (c.label || c.id)) {
+                        const lbl = (c.label || c.id).toString().toUpperCase().trim();
+                        if (lbl === 'NOMBRE_PAREJA' || lbl.includes('PAREJA')) idxPareja = idx;
+                        if (lbl === 'GRUPO') idxGrupo = idx;
+                        if (lbl === 'ESTADO') idxEstado = idx;
+                    }
+                });
+
+                json.table.rows.forEach(r => {
+                    if (r.c) {
+                        let parej = r.c[idxPareja] && r.c[idxPareja].v ? r.c[idxPareja].v.toString().trim() : '';
+                        let grup = r.c[idxGrupo] && r.c[idxGrupo].v ? r.c[idxGrupo].v.toString().trim() : '';
+                        let estado = r.c[idxEstado] && r.c[idxEstado].v ? r.c[idxEstado].v.toString().trim() : 'Activo';
+
+                        // Filtrar filas válidas que contengan parejas reales y descartan encabezados, teléfonos o valores #N/A
+                        if (parej && grup && 
+                            !parej.includes('#N/A') && 
+                            !parej.toUpperCase().includes('NOMBRE_PAREJA') && 
+                            !grup.toUpperCase().includes('GRUPO') &&
+                            (estado.toUpperCase() === 'ACTIVO' || estado === '')) {
+                            
+                            // Asegurar formato limpio de grupo (ej: "GRUPO B", "GRUPO C", "GRUPO D")
+                            let grupoFormateado = grup.toUpperCase().startsWith('GRUPO') ? grup.toUpperCase() : `GRUPO ${grup.toUpperCase()}`;
+                            cache.parejas.push({ nombre: parej, grupo: grupoFormateado });
+                        }
+                    }
+                });
+            }
+
+            finalizarCargaDrive();
+            sincronizarDatosDriveExtras();
+        }
+
+        function usarDatosSimulados() {
+            // Ya no usamos datos simulados para no interferir con la revisión de datos reales
+            console.warn("Intentando reintentar carga de datos reales...");
+        }
+
+        function finalizarCargaDrive() {
+            const loading = document.getElementById('loading-datos');
+            const formLogin = document.getElementById('form-login');
+            if (loading) loading.classList.add('hidden');
+            if (formLogin) formLogin.classList.remove('hidden');
+
+            poblarSelectsLogin();
+            
+            // SIEMPRE MOSTRAR LA PANTALLA DE IDENTIFICACIÓN AL ENTRAR (Modal visible por defecto)
+            const modalId = document.getElementById('identificacion-modal');
+            if (modalId) modalId.classList.remove('hidden');
+
+            // Preseleccionar por defecto la última pareja e identificación guardadas en localStorage
+            const expGrupo = localStorage.getItem('miGrupo');
+            const expPareja = localStorage.getItem('miPareja');
+            if (expGrupo && expPareja) {
+                const selectGrupo = document.getElementById('login-grupo');
+                const selectPareja = document.getElementById('login-pareja');
+
+                if (selectGrupo) {
+                    selectGrupo.value = expGrupo;
+                    selectGrupo.dispatchEvent(new Event('change'));
+                }
+                if (selectPareja) {
+                    selectPareja.value = expPareja;
+                }
+            }
+        }
+
+        function poblarSelectsLogin() {
+            const selectGrupo = document.getElementById('login-grupo');
+            const selectPareja = document.getElementById('login-pareja');
+            if (!selectGrupo || !selectPareja) return;
+
+            // Extraer lista de grupos únicos ordenados directamente desde cache.parejas (Pestaña Parejas)
+            const grupos = [...new Set(cache.parejas.map(p => p.grupo))].sort();
+            selectGrupo.innerHTML = '<option value="" disabled selected>Elige grupo</option>';
+            grupos.forEach(g => {
+                selectGrupo.innerHTML += `<option value="${g}">${g}</option>`;
+            });
+
+            // Al seleccionar un grupo, filtrar obligatoriamente solo las parejas pertenecientes a dicho grupo
+            selectGrupo.onchange = () => {
+                const grpSel = selectGrupo.value;
+                const parejasDelGrupo = cache.parejas.filter(p => p.grupo === grpSel);
+                selectPareja.innerHTML = '<option value="" disabled selected>Elige pareja</option>';
+                parejasDelGrupo.forEach(p => {
+                    selectPareja.innerHTML += `<option value="${p.nombre}">${p.nombre}</option>`;
+                });
+            };
+        }
+
+        function guardarSeleccionPareja() {
+            const selGrp = document.getElementById('login-grupo').value;
+            const selPar = document.getElementById('login-pareja').value;
+
+            if (!selGrp || !selPar) {
+                alert("Por favor elige grupo y pareja.");
+                return;
+            }
+
+            state.miGrupo = selGrp;
+            state.miPareja = selPar;
+            localStorage.setItem('miGrupo', selGrp);
+            localStorage.setItem('miPareja', selPar);
+
+            document.getElementById('header-grupo').innerText = selGrp;
+            document.getElementById('header-pareja').innerText = selPar;
+            document.getElementById('info-ronda').innerText = state.rondaActiva !== 'Cargando...' ? state.rondaActiva : "Sin ronda activa en Drive";
+            document.getElementById('identificacion-modal').classList.add('hidden');
+
+            renderizarTodo();
+        }
+
+        function renderizarTodo() {
+            // Inicializar clasificación local si está vacía
+            if (cache.clasificacion.length === 0) {
+                const parejasGrupo = cache.parejas.filter(p => p.grupo === state.miGrupo);
+                cache.clasificacion = parejasGrupo.map(p => ({
+                    pareja: p.nombre, pts: 0, jg: 0, jp: 0, dif: 0
+                }));
+            }
+            renderPendientes();
+            renderDisponibilidades();
+            renderListaChats();
+            renderClasificacion();
+        }
+
+        // ==========================================
+        // RENDERIZADO DE TABLONES Y LISTAS
+        // ==========================================
+        function renderPendientes() {
+            const container = document.getElementById('lista-pendientes');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const rivales = cache.parejas.filter(p => p.grupo === state.miGrupo && p.nombre !== state.miPareja);
+
+            rivales.forEach(r => {
+                const esCerrado = cache.cerrados.includes(r.nombre);
+                
+                // Verificar disponibilidad coincidente (Match)
+                const misDisps = cache.disponibilidades.filter(d => d.pareja === state.miPareja);
+                const rivalDisps = cache.disponibilidades.filter(d => d.pareja === r.nombre);
+                
+                let coincide = false;
+                let fechaCoincidencia = '';
+                misDisps.forEach(md => {
+                    rivalDisps.forEach(rd => {
+                        if (md.fecha === rd.fecha && md.franja === rd.franja) {
+                            coincide = true;
+                            fechaCoincidencia = `${md.fecha} (${md.franja})`;
+                        }
+                    });
+                });
+
+                // Si hacen match en fecha/hora, abrir sala de chat automáticamente para que puedan dialogar
+                if (coincide && !cache.chats[r.nombre]) {
+                    cache.chats[r.nombre] = [{
+                        emisor: "Sistema",
+                        mensaje: `¡Habéis hecho Match! Coincidís el ${fechaCoincidencia}. Acordad pista y hora aquí.`,
+                        hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    }];
+                    localStorage.setItem('chats', JSON.stringify(cache.chats));
+                }
+
+                let colorClase = 'border-rose-500/50 bg-rose-950/20'; // Rojo: sin coincidencia
+                let estadoTexto = 'Sin coincidencia (Usa chat para acordar)';
+                let tagColor = 'bg-rose-500/20 text-rose-300';
+
+                if (esCerrado) {
+                    colorClase = 'border-emerald-500/50 bg-emerald-950/20'; // Verde: match cerrado/confirmado
+                    estadoTexto = 'Match confirmado / Partido cerrado';
+                    tagColor = 'bg-emerald-500/20 text-emerald-300';
+                } else if (coincide) {
+                    colorClase = 'border-amber-500/50 bg-amber-950/20'; // Naranja: match de fecha/hora
+                    estadoTexto = `¡Match! Coincidencia: ${fechaCoincidencia}`;
+                    tagColor = 'bg-amber-500/20 text-amber-300';
+                }
+
+                container.innerHTML += `
+                    <div class="p-4 rounded-xl border ${colorClase} mb-3 flex justify-between items-center transition-all">
+                        <div>
+                            <h4 class="font-bold text-white text-base">${r.nombre}</h4>
+                            <span class="inline-block text-xs px-2.5 py-0.5 rounded-full font-semibold mt-1 ${tagColor}">
+                                ${estadoTexto}
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            ${!esCerrado ? `
+                                <button onclick="cerrarPartido('${r.nombre}')" class="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center shadow-md transition" title="${coincide ? 'Confirmar Match (Pasar a Verde)' : 'Marcar acuerdo manual (Pasar a Verde)'}">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            ` : `
+                                <span class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold" title="Partido cerrado en verde">
+                                    <i class="fas fa-check-double"></i>
+                                </span>
+                            `}
+                            <button onclick="abrirChatWith('${r.nombre}')" class="w-10 h-10 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center shadow-md transition" title="Abrir Chat para dialogar">
+                                <i class="fas fa-comment"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderDisponibilidades() {
+            const container = document.getElementById('lista-disponibilidades');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const dispsGrupo = cache.disponibilidades.filter(d => d.grupo === state.miGrupo && d.pareja !== state.miPareja);
+
+            if (dispsGrupo.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No hay disponibilidades publicadas por otras parejas aún.</p>';
+                return;
+            }
+
+            dispsGrupo.forEach(d => {
+                container.innerHTML += `
+                    <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-700 flex justify-between items-center text-xs">
+                        <div>
+                            <span class="font-bold text-cyan-400 block">${d.pareja}</span>
+                            <span class="text-slate-300"><i class="fas fa-calendar mr-1"></i> ${d.fecha}</span>
+                        </div>
+                        <span class="bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-semibold border border-slate-700">
+                            ${d.franja}
+                        </span>
+                    </div>
+                `;
+            });
+        }
+
+        function guardarDisponibilidad() {
+            const fecha = document.getElementById('input-fecha-disp').value;
+            const franja = document.getElementById('select-franja-disp').value;
+
+            if (!fecha) {
+                alert("Selecciona una fecha.");
+                return;
+            }
+
+            const nuevaDisp = { pareja: state.miPareja, grupo: state.miGrupo, fecha, franja };
+            cache.disponibilidades.push(nuevaDisp);
+            localStorage.setItem('disp', JSON.stringify(cache.disponibilidades));
+
+            renderDisponibilidades();
+            renderPendientes();
+            alert("Disponibilidad publicada con éxito.");
+
+            if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ accion: 'guardarDisponibilidad', ...nuevaDisp })
+                }).catch(e => console.log(e));
+            }
+        }
+
+        function cerrarPartido(rival) {
+            if (!cache.cerrados.includes(rival)) {
+                cache.cerrados.push(rival);
+                localStorage.setItem('cerrados', JSON.stringify(cache.cerrados));
+            }
+            // Iniciar chat automático si no existe
+            if (!cache.chats[rival]) {
+                cache.chats[rival] = [{ emisor: "Sistema", mensaje: "¡Partido marcado como cerrado!", hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }];
+                localStorage.setItem('chats', JSON.stringify(cache.chats));
+            }
+            renderPendientes();
+        }
+
+        // ==========================================
+        // SISTEMA DE CHAT
+        // ==========================================
+        function abrirChatWith(rival) {
+            chatActivoRival = rival;
+            document.getElementById('chat-titulo-pareja').innerText = rival;
+            document.getElementById('modal-chat-sala').classList.remove('hidden');
+            renderMensajesChat();
+        }
+
+        function cerrarChatSala() {
+            document.getElementById('modal-chat-sala').classList.add('hidden');
+            chatActivoRival = null;
+        }
+
+        function renderMensajesChat() {
+            const container = document.getElementById('chat-mensajes');
+            if (!container || !chatActivoRival) return;
+            container.innerHTML = '';
+
+            const msgs = cache.chats[chatActivoRival] || [];
+            msgs.forEach(m => {
+                const esMio = m.emisor === state.miPareja;
+                container.innerHTML += `
+                    <div class="flex flex-col ${esMio ? 'items-end' : 'items-start'}">
+                        <div class="max-w-[80%] p-3 rounded-2xl text-sm ${esMio ? 'bg-cyan-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'}">
+                            <span class="text-[10px] block opacity-75 mb-0.5 font-bold">${m.emisor}</span>
+                            <p>${m.mensaje}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function enviarMensajeChat() {
+            const input = document.getElementById('chat-input');
+            const txt = input ? input.value.trim() : '';
+            if (!txt || !chatActivoRival) return;
+
+            if (!cache.chats[chatActivoRival]) cache.chats[chatActivoRival] = [];
+            
+            const msgObj = {
+                emisor: state.miPareja,
+                mensaje: txt,
+                hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            };
+            cache.chats[chatActivoRival].push(msgObj);
+            localStorage.setItem('chats', JSON.stringify(cache.chats));
+
+            input.value = '';
+            renderMensajesChat();
+            renderListaChats();
+
+            if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({
+                        accion: 'guardarChat',
+                        grupo: state.miGrupo,
+                        emisor: state.miPareja,
+                        receptor: chatActivoRival,
+                        mensaje: txt
+                    })
+                }).catch(e => console.log(e));
+            }
+        }
+
+        function renderListaChats() {
+            const container = document.getElementById('lista-chats-activos');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const clavesChats = Object.keys(cache.chats);
+            if (clavesChats.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No tienes chats ni matches abiertos aún.</p>';
+                return;
+            }
+
+            clavesChats.forEach(rival => {
+                const ultimoMsg = cache.chats[rival][cache.chats[rival].length - 1];
+                container.innerHTML += `
+                    <div onclick="abrirChatWith('${rival}')" class="p-4 bg-slate-800/80 rounded-xl border border-slate-700 flex justify-between items-center cursor-pointer hover:border-cyan-500/50 transition">
+                        <div>
+                            <h4 class="font-bold text-white text-sm">${rival}</h4>
+                            <p class="text-xs text-slate-400 truncate max-w-[200px]">${ultimoMsg ? ultimoMsg.mensaje : 'Chat iniciado'}</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-cyan-400"></i>
+                    </div>
+                `;
+            });
+        }
+
+        // ==========================================
+        // CLASIFICACIÓN Y PARTIDOS
+        // ==========================================
+        function renderClasificacion() {
+            const container = document.getElementById('cuerpo-clasificacion');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // Ordenar por Pts, luego por DIF
+            const clasifOrdenada = [...cache.clasificacion].sort((a, b) => {
+                if (b.pts !== a.pts) return b.pts - a.pts;
+                return b.dif - a.dif;
+            });
+
+            clasifOrdenada.forEach((item, index) => {
+                const esMiPareja = item.pareja === state.miPareja;
+                container.innerHTML += `
+                    <tr onclick="mostrarHistorialPareja('${item.pareja}')" class="cursor-pointer hover:bg-slate-800/50 transition ${esMiPareja ? 'bg-cyan-950/40 text-cyan-300 font-bold' : ''}">
+                        <td class="px-4 py-3">${index + 1}º</td>
+                        <td class="px-4 py-3">${item.pareja}</td>
+                        <td class="px-3 py-3 text-center font-bold text-cyan-400">${item.pts}</td>
+                        <td class="px-3 py-3 text-center">${item.jg}</td>
+                        <td class="px-3 py-3 text-center">${item.jp}</td>
+                        <td class="px-3 py-3 text-center ${item.dif >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${item.dif > 0 ? '+' + item.dif : item.dif}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function mostrarHistorialPareja(nombrePareja) {
+            document.getElementById('historial-nombre-pareja').innerText = nombrePareja;
+            const container = document.getElementById('historial-lista-partidos');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const partidosPareja = cache.partidos.filter(p => p.pareja1 === nombrePareja || p.pareja2 === nombrePareja);
+
+            if (partidosPareja.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">No hay partidos jugados por esta pareja aún.</p>';
+            } else {
+                partidosPareja.forEach(p => {
+                    const gano = p.ganador === nombrePareja;
+                    container.innerHTML += `
+                        <div class="p-2.5 rounded-lg bg-slate-800 border border-slate-700 flex justify-between items-center text-xs">
+                            <div>
+                                <span class="font-bold text-white block">vs ${p.pareja1 === nombrePareja ? p.pareja2 : p.pareja1}</span>
+                                <span class="text-slate-400">${p.resultadoSets}</span>
+                            </div>
+                            <span class="font-bold px-2 py-1 rounded ${gano ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
+                                ${gano ? 'Victoria' : 'Derrota'}
+                            </span>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('modal-historial-pareja').classList.remove('hidden');
+        }
+
+        function rellenarDesplegableRivales() {
+            const select = document.getElementById('res-rival');
+            if (!select) return;
+            select.innerHTML = '';
+
+            const rivales = cache.parejas.filter(p => p.grupo === state.miGrupo && p.nombre !== state.miPareja);
+            rivales.forEach(r => {
+                select.innerHTML += `<option value="${r.nombre}">${r.nombre}</option>`;
+            });
+        }
+
+        function abrirModalResultado() {
+            rellenarDesplegableRivales();
+            document.getElementById('modal-resultado').classList.remove('hidden');
+        }
+
+        function cerrarModalResultado() {
+            document.getElementById('modal-resultado').classList.add('hidden');
+        }
+
+        function guardarResultado() {
+            const rival = document.getElementById('res-rival').value;
+            const set1 = document.getElementById('res-set1').value.trim();
+            const set2 = document.getElementById('res-set2').value.trim();
+            const set3 = document.getElementById('res-set3').value.trim();
+            const quienGano = document.getElementById('res-ganador').value;
+
+            if (!rival || !set1 || !set2) {
+                alert("Completa al menos el Set 1 y Set 2.");
+                return;
+            }
+
+            const nombreGanador = quienGano === 'Nosotras' ? state.miPareja : rival;
+            const resultadoSets = set3 ? `${set1}, ${set2}, ${set3}` : `${set1}, ${set2}`;
+
+            const partidoObj = {
+                pareja1: state.miPareja,
+                pareja2: rival,
+                resultadoSets: resultadoSets,
+                ganador: nombreGanador,
+                grupo: state.miGrupo
+            };
+
+            // Comprobar si ya existe un resultado con esta pareja
+            const indiceExistente = cache.partidos.findIndex(p => 
+                (p.pareja1.toLowerCase() === state.miPareja.toLowerCase() && p.pareja2.toLowerCase() === rival.toLowerCase()) ||
+                (p.pareja2.toLowerCase() === state.miPareja.toLowerCase() && p.pareja1.toLowerCase() === rival.toLowerCase())
+            );
+
+            if (indiceExistente !== -1) {
+                partidoPendienteGuardar = { partidoObj, indiceExistente };
+                document.getElementById('texto-confirmar-duplicado').innerText = `Ya has publicado un resultado para la pareja "${rival}". ¿Deseas modificar el resultado?`;
+                document.getElementById('modal-confirmar-duplicado').classList.remove('hidden');
+            } else {
+                ejecutarGuardadoResultado(partidoObj, false);
+            }
+        }
+
+        function ejecutarGuardadoResultado(partidoObj, esModificacion, indice = -1) {
+            if (esModificacion && partidoPendienteGuardar) {
+                cache.partidos[partidoPendienteGuardar.indiceExistente] = partidoObj;
+                recalcularTodaLaClasificacion();
+            } else {
+                cache.partidos.push(partidoObj);
+                actualizarRankingLocal(partidoObj);
+            }
+
+            localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
+            
+            // Marcar el partido como cerrado automáticamente
+            cerrarPartido(partidoObj.pareja2);
+
+            cerrarModalResultado();
+            renderPartidosRegistrados();
+            renderClasificacion();
+
+            if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                fetch(URL_GOOGLE_SCRIPT, {
+                    method: 'POST', mode: 'no-cors',
+                    body: JSON.stringify({ accion: 'guardarResultado', ...partidoObj })
+                }).catch(e => console.log(e));
+            }
+        }
+
+        function actualizarRankingLocal(p) {
+            // Extraer juegos de los sets
+            let jg1 = 0, jp1 = 0, jg2 = 0, jp2 = 0;
+            const sets = p.resultadoSets.split(',');
+            sets.forEach(s => {
+                const partes = s.trim().split('-');
+                if (partes.length === 2) {
+                    const a = parseInt(partes[0]) || 0;
+                    const b = parseInt(partes[1]) || 0;
+                    jg1 += a; jp1 += b;
+                    jg2 += b; jp2 += a;
+                }
+            });
+
+            // Asignar puntos según ganador
+            const ganoP1 = p.ganador === p.pareja1;
+            const ptsP1 = ganoP1 ? (sets.length === 3 ? 3 : 4) : (sets.length === 3 ? 2 : 1);
+            const ptsP2 = ganoP1 ? (sets.length === 3 ? 2 : 1) : (sets.length === 3 ? 3 : 4);
+
+            const c1 = cache.clasificacion.find(c => c.pareja === p.pareja1);
+            if (c1) {
+                c1.pts += ptsP1;
+                c1.jg += jg1;
+                c1.jp += jp1;
+                c1.dif = c1.jg - c1.jp;
+            }
+
+            const c2 = cache.clasificacion.find(c => c.pareja === p.pareja2);
+            if (c2) {
+                c2.pts += ptsP2;
+                c2.jg += jg2;
+                c2.jp += jp2;
+                c2.dif = c2.jg - c2.jp;
+            }
+        }
+
+        function renderPartidosRegistrados() {
+            const container = document.getElementById('lista-partidos');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const misPartidos = cache.partidos.filter(p => p.pareja1 === state.miPareja || p.pareja2 === state.miPareja);
+
+            if (misPartidos.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">No has registrado partidos en esta ronda.</p>';
+                return;
+            }
+
+            misPartidos.forEach(p => {
+                const gano = p.ganador === state.miPareja;
+                const rival = p.pareja1 === state.miPareja ? p.pareja2 : p.pareja1;
+
+                container.innerHTML += `
+                    <div class="p-4 bg-slate-800/80 rounded-xl border border-slate-700 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-white text-sm block">vs ${rival}</span>
+                            <span class="text-xs text-cyan-400 font-semibold">${p.resultadoSets}</span>
+                        </div>
+                        <span class="text-xs font-bold px-3 py-1 rounded-full ${gano ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}">
+                            ${gano ? 'Victoria' : 'Derrota'}
+                        </span>
+                    </div>
+                `;
+            });
+        }
+
+        // ==========================================
+        // FUNCIONES ADMIN Y PANEL
+        // ==========================================
+        function salirModoAdmin() {
+            state.rol = 'jugadora';
+            const badge = document.getElementById('badge-rol');
+            if (badge) {
+                badge.innerText = 'Jugadora';
+                badge.className = 'bg-slate-700 text-slate-300 text-xs px-3 py-1 rounded-full font-semibold border border-slate-600';
+            }
+            cambiarPestana('inicio', document.querySelector('.tab-btn'));
+        }
+
+        function prepararPanelAdminGrupos() {
+            renderAdminListaPartidos();
+            renderAdminReasignacionGrupos();
+        }
+
+        function renderAdminListaPartidos() {
+            const container = document.getElementById('admin-lista-partidos');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (cache.partidos.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">No hay partidos registrados en esta ronda.</p>';
+                return;
+            }
+
+            cache.partidos.forEach((p, index) => {
+                container.innerHTML += `
+                    <div class="flex justify-between items-center p-3 bg-slate-800 rounded-xl border border-slate-700 text-xs mb-2">
+                        <div>
+                            <span class="font-bold text-white block">${p.pareja1} vs ${p.pareja2}</span>
+                            <span class="text-cyan-400 font-semibold">${p.resultadoSets} (Ganó: ${p.ganador})</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="editarPartidoAdmin(${index})" class="text-cyan-400 hover:text-cyan-300 bg-slate-900 p-2 rounded-lg border border-slate-700" title="Editar resultado">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
+                            <button onclick="borrarPartidoAdmin(${index})" class="text-rose-400 hover:text-rose-300 bg-slate-900 p-2 rounded-lg border border-slate-700" title="Borrar partido">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function editarPartidoAdmin(index) {
+            const p = cache.partidos[index];
+            if (!p) return;
+
+            const nuevoResultado = prompt(`Editar resultado para ${p.pareja1} vs ${p.pareja2}:`, p.resultadoSets);
+            if (nuevoResultado !== null && nuevoResultado.trim() !== '') {
+                p.resultadoSets = nuevoResultado.trim();
+
+                const nuevoGanador = prompt(`¿Quién ganó? (Escribe: "${p.pareja1}" o "${p.pareja2}")`, p.ganador);
+                if (nuevoGanador !== null && nuevoGanador.trim() !== '') {
+                    p.ganador = nuevoGanador.trim();
+                }
+
+                localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
+                
+                // Recalcular clasificación local completa
+                recalcularTodaLaClasificacion();
+                renderAdminListaPartidos();
+                renderPartidosRegistrados();
+                renderClasificacion();
+                alert("Resultado actualizado correctamente.");
+            }
+        }
+
+        function borrarPartidoAdmin(index) {
+            if (confirm("¿Estás segura de eliminar este partido? Se recalculará la clasificación.")) {
+                cache.partidos.splice(index, 1);
+                localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
+                recalcularTodaLaClasificacion();
+                renderAdminListaPartidos();
+                renderPartidosRegistrados();
+                renderClasificacion();
+            }
+        }
+
+        function recalcularTodaLaClasificacion() {
+            // Reiniciar estadísticas de todas las parejas
+            cache.clasificacion.forEach(c => {
+                c.pts = 0;
+                c.jg = 0;
+                c.jp = 0;
+                c.dif = 0;
+            });
+
+            // Reaplicar cada partido registrado
+            cache.partidos.forEach(p => {
+                actualizarRankingLocal(p);
+            });
+        }
+
+        function renderAdminReasignacionGrupos() {
+            const container = document.getElementById('panel-admin-grupos');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const gruposDisponibles = [...new Set(cache.parejas.map(p => p.grupo))].sort();
+            if (gruposDisponibles.length === 0) gruposDisponibles.push('GRUPO A', 'GRUPO B', 'GRUPO C');
+
+            cache.parejas.forEach((p, idx) => {
+                let opciones = gruposDisponibles.map(g => 
+                    `<option value="${g}" ${p.grupo === g ? 'selected' : ''}>${g}</option>`
+                ).join('');
+
+                container.innerHTML += `
+                    <div class="flex justify-between items-center p-2.5 bg-slate-800/80 rounded-xl border border-slate-700 text-xs">
+                        <span class="font-semibold text-slate-200 truncate max-w-[50%]">${p.nombre}</span>
+                        <select id="select-grupo-pareja-${idx}" data-pareja="${p.nombre}" class="bg-slate-900 border border-slate-700 text-cyan-400 p-2 rounded-lg outline-none font-bold">
+                            ${opciones}
+                        </select>
+                    </div>
+                `;
+            });
+        }
+
+        function vaciarChatsYDisponibilidades() {
+            if (confirm("¿Segura que deseas vaciar todas las disponibilidades y chats?")) {
+                cache.disponibilidades = [];
+                cache.chats = {};
+                cache.matches = [];
+                cache.cerrados = [];
+                localStorage.removeItem('disp');
+                localStorage.removeItem('chats');
+                localStorage.removeItem('matches');
+                localStorage.removeItem('cerrados');
+
+                renderizarTodo();
+
+                if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                    fetch(URL_GOOGLE_SCRIPT, {
+                        method: 'POST', mode: 'no-cors',
+                        body: JSON.stringify({ accion: 'vaciarChatsYDisponibilidades' })
+                    }).catch(e => console.log(e));
+                }
+                alert("Se han borrado los chats y disponibilidades correctamente.");
+            }
+        }
+
+        function iniciarSiguienteRonda() {
+            const fIni = document.getElementById('admin-ronda-inicio').value;
+            const fFin = document.getElementById('admin-ronda-fin').value;
+
+            if (!fIni || !fFin) {
+                alert("Por favor selecciona las fechas de la nueva ronda.");
+                return;
+            }
+
+            // Recoger asignaciones de nuevos grupos para la siguiente ronda
+            const asignaciones = [];
+            cache.parejas.forEach((p, idx) => {
+                const el = document.getElementById(`select-grupo-pareja-${idx}`);
+                if (el) {
+                    const nuevoGrupo = el.value;
+                    p.grupo = nuevoGrupo; // Actualizar localmente
+                    asignaciones.push({ nombre: p.nombre, nuevoGrupo: nuevoGrupo });
+                }
+            });
+
+            if (confirm("¿Deseas iniciar la siguiente ronda con las asignaciones de grupo seleccionadas? Se archivará la ronda actual.")) {
+                cache.disponibilidades = [];
+                cache.chats = {};
+                cache.matches = [];
+                cache.cerrados = [];
+                cache.partidos = [];
+                localStorage.clear();
+
+                if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
+                    fetch(URL_GOOGLE_SCRIPT, {
+                        method: 'POST', mode: 'no-cors',
+                        body: JSON.stringify({
+                            accion: 'cambiarRonda',
+                            fechaInicio: fIni,
+                            fechaFin: fFin,
+                            asignaciones: asignaciones
+                        })
+                    }).catch(e => console.log(e));
+                }
+
+                alert("Siguiente ronda iniciada con éxito. Se recargará la aplicación.");
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
