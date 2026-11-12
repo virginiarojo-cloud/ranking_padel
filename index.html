@@ -589,6 +589,12 @@
                 });
 
             cargarFechasRondaActiva();
+            // Sincronización periódica cada 12 segundos para reflejar cambios de la otra pareja en tiempo real
+            setInterval(() => {
+                if (state.miPareja) {
+                    sincronizarDatosDriveExtras();
+                }
+            }, 12000);
         }
 
         function cargarFechasRondaActiva() {
@@ -660,6 +666,84 @@
                                 if (state.miPareja) {
                                     renderDisponibilidades();
                                     renderPendientes();
+                                }
+                            }
+                        }
+                    }
+                }).catch(() => {});
+
+            // Sincronizar Chats y Confirmaciones de Partido Cerrado desde la pestaña Chats de Drive
+            const urlChats = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Chats&tqx=out:json`;
+            fetch(urlChats)
+                .then(r => r.text())
+                .then(text => {
+                    const startIdx = text.indexOf('{');
+                    const endIdx = text.lastIndexOf('}');
+                    if (startIdx !== -1 && endIdx !== -1) {
+                        const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+                        if (json && json.table && json.table.rows && state.miPareja) {
+                            const miParejaNorm = normalizarTexto(state.miPareja);
+                            let huboCambios = false;
+
+                            json.table.rows.forEach(r => {
+                                if (r.c && r.c[2] && r.c[3] && r.c[4]) {
+                                    const emisor = r.c[2].v ? r.c[2].v.toString().trim() : '';
+                                    const receptor = r.c[3].v ? r.c[3].v.toString().trim() : '';
+                                    const mensaje = r.c[4].v ? r.c[4].v.toString().trim() : '';
+                                    const fechaRaw = r.c[0] && r.c[0].f ? r.c[0].f : '';
+
+                                    if (!emisor || !receptor || emisor.toLowerCase() === 'emisor') return;
+
+                                    const emisorNorm = normalizarTexto(emisor);
+                                    const receptorNorm = normalizarTexto(receptor);
+
+                                    // Determinar si la conversación nos involucra (como emisor o receptor)
+                                    let rivalNombre = null;
+                                    if (emisorNorm === miParejaNorm) {
+                                        rivalNombre = receptor;
+                                    } else if (receptorNorm === miParejaNorm) {
+                                        rivalNombre = emisor;
+                                    }
+
+                                    if (rivalNombre) {
+                                        // Buscar el nombre exacto de la pareja rival en cache.parejas para mantener consistencia
+                                        const rivalObj = cache.parejas.find(p => normalizarTexto(p.nombre) === normalizarTexto(rivalNombre));
+                                        const claveRival = rivalObj ? rivalObj.nombre : rivalNombre;
+
+                                        // Si el mensaje es la marca de confirmación de partido cerrado, sincronizar estado verde para ambas parejas
+                                        if (mensaje.includes('[MATCH_CONFIRMADO]')) {
+                                            if (!cache.cerrados.some(c => normalizarTexto(c) === normalizarTexto(claveRival))) {
+                                                cache.cerrados.push(claveRival);
+                                                localStorage.setItem('cerrados', JSON.stringify(cache.cerrados));
+                                                huboCambios = true;
+                                            }
+                                        }
+
+                                        if (!cache.chats[claveRival]) cache.chats[claveRival] = [];
+                                        const textoLimpio = mensaje.replace('[MATCH_CONFIRMADO]', '').trim();
+                                        const yaExisteMsg = cache.chats[claveRival].some(m => 
+                                            normalizarTexto(m.emisor) === emisorNorm && m.mensaje === textoLimpio
+                                        );
+
+                                        if (!yaExisteMsg && textoLimpio) {
+                                            cache.chats[claveRival].push({
+                                                emisor: emisor,
+                                                mensaje: textoLimpio,
+                                                hora: fechaRaw || ''
+                                            });
+                                            huboCambios = true;
+                                        }
+                                    }
+                                }
+                            });
+
+                            if (huboCambios) {
+                                localStorage.setItem('chats', JSON.stringify(cache.chats));
+                                renderDisponibilidades();
+                                renderPendientes();
+                                renderListaChats();
+                                if (chatActivoRival) {
+                                    renderMensajesChat();
                                 }
                             }
                         }
@@ -791,16 +875,11 @@
                 const parejasGrupo = cache.parejas.filter(p => p.grupo === state.miGrupo);
                 cache.clasificacion = parejasGrupo.map(p => ({ pareja: p.nombre, pts: 0, jg: 0, jp: 0, dif: 0 }));
             }
-            const rivalesGrupo = cache.parejas.filter(p => normalizarTexto(p.grupo) === normalizarTexto(state.miGrupo) && normalizarTexto(p.nombre) !== normalizarTexto(state.miPareja));
-            if (rivalesGrupo.length > 0 && cache.disponibilidades.length === 0) {
-                const hoyStr = new Date().toISOString().split('T')[0];
-                cache.disponibilidades.push({ pareja: state.miPareja, grupo: state.miGrupo, fecha: hoyStr, franja: "18:00 - 20:00" });
-                cache.disponibilidades.push({ pareja: rivalesGrupo[0].nombre, grupo: state.miGrupo, fecha: hoyStr, franja: "18:00 - 20:00" });
-            }
             renderPendientes();
             renderDisponibilidades();
             renderListaChats();
             renderClasificacion();
+            sincronizarDatosDriveExtras();
         }
 
         // ==========================================
@@ -987,69 +1066,20 @@
                 cache.cerrados.push(rival);
                 localStorage.setItem('cerrados', JSON.stringify(cache.cerrados));
             }
+            const textoConfirmacion = "¡Match confirmado! Partido cerrado en verde.";
             if (!cache.chats[rival]) {
-                cache.chats[rival] = [{ emisor: "Sistema", mensaje: "¡Match confirmado! Partido marcado en verde.", hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }];
+                cache.chats[rival] = [];
+            }
+            if (!cache.chats[rival].some(m => m.mensaje === textoConfirmacion)) {
+                cache.chats[rival].push({ 
+                    emisor: state.miPareja, 
+                    mensaje: textoConfirmacion, 
+                    hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+                });
                 localStorage.setItem('chats', JSON.stringify(cache.chats));
             }
-            renderDisponibilidades();
-            renderPendientes();
-            renderListaChats();
-        }
 
-        // ==========================================
-        // CHAT
-        // ==========================================
-        function abrirChatWith(rival) {
-            chatActivoRival = rival;
-            document.getElementById('chat-titulo-pareja').innerText = rival;
-            document.getElementById('modal-chat-sala').classList.remove('hidden');
-            renderMensajesChat();
-        }
-
-        function cerrarChatSala() {
-            document.getElementById('modal-chat-sala').classList.add('hidden');
-            chatActivoRival = null;
-        }
-
-        function renderMensajesChat() {
-            const container = document.getElementById('chat-mensajes');
-            if (!container || !chatActivoRival) return;
-            container.innerHTML = '';
-
-            const msgs = cache.chats[chatActivoRival] || [];
-            msgs.forEach(m => {
-                const esMio = m.emisor === state.miPareja;
-                container.innerHTML += `
-                    <div class="flex flex-col ${esMio ? 'items-end' : 'items-start'}">
-                        <div class="max-w-[80%] p-3 rounded-2xl text-sm ${esMio ? 'bg-cyan-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'}">
-                            <span class="text-[10px] block opacity-75 mb-0.5 font-bold">${m.emisor}</span>
-                            <p>${m.mensaje}</p>
-                        </div>
-                    </div>
-                `;
-            });
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function enviarMensajeChat() {
-            const input = document.getElementById('chat-input');
-            const txt = input ? input.value.trim() : '';
-            if (!txt || !chatActivoRival) return;
-
-            if (!cache.chats[chatActivoRival]) cache.chats[chatActivoRival] = [];
-            
-            const msgObj = {
-                emisor: state.miPareja,
-                mensaje: txt,
-                hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-            };
-            cache.chats[chatActivoRival].push(msgObj);
-            localStorage.setItem('chats', JSON.stringify(cache.chats));
-
-            input.value = '';
-            renderMensajesChat();
-            renderListaChats();
-
+            // Enviar la confirmación a Google Sheets (pestaña Chats) para que la otra pareja reciba el estado verde y el mensaje
             if (typeof URL_GOOGLE_SCRIPT !== 'undefined' && URL_GOOGLE_SCRIPT) {
                 fetch(URL_GOOGLE_SCRIPT, {
                     method: 'POST', mode: 'no-cors',
@@ -1057,10 +1087,17 @@
                         accion: 'guardarChat',
                         grupo: state.miGrupo,
                         emisor: state.miPareja,
-                        receptor: chatActivoRival,
-                        mensaje: txt
+                        receptor: rival,
+                        mensaje: `[MATCH_CONFIRMADO] ${textoConfirmacion}`
                     })
                 }).catch(e => console.log(e));
+            }
+
+            renderDisponibilidades();
+            renderPendientes();
+            renderListaChats();
+            if (chatActivoRival === rival) {
+                renderMensajesChat();
             }
         }
 
