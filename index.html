@@ -845,11 +845,33 @@
                                     const resultadoSets = r.c[5].v ? r.c[5].v.toString().trim() : '';
                                     const ganador = r.c[6] && r.c[6].v ? r.c[6].v.toString().trim() : '';
                                     if (pareja1 && pareja2 && !pareja1.toLowerCase().includes('pareja')) {
-                                        partDrive.push({ grupo, pareja1, pareja2, resultadoSets, ganador });
+                                        const idxPrevio = partDrive.findIndex(p =>
+                                            (normalizarTexto(p.pareja1) === normalizarTexto(pareja1) && normalizarTexto(p.pareja2) === normalizarTexto(pareja2)) ||
+                                            (normalizarTexto(p.pareja2) === normalizarTexto(pareja1) && normalizarTexto(p.pareja1) === normalizarTexto(pareja2))
+                                        );
+                                        const nuevoRegistro = { grupo, pareja1, pareja2, resultadoSets, ganador };
+                                        if (idxPrevio !== -1) {
+                                            partDrive[idxPrevio] = nuevoRegistro;
+                                        } else {
+                                            partDrive.push(nuevoRegistro);
+                                        }
                                     }
                                 }
                             });
                             if (partDrive.length > 0) {
+                                const ahora = Date.now();
+                                const recientesLocales = cache.partidos.filter(lp => lp.ts && (ahora - lp.ts < 15000));
+                                recientesLocales.forEach(rl => {
+                                    const idxD = partDrive.findIndex(p =>
+                                        (normalizarTexto(p.pareja1) === normalizarTexto(rl.pareja1) && normalizarTexto(p.pareja2) === normalizarTexto(rl.pareja2)) ||
+                                        (normalizarTexto(p.pareja2) === normalizarTexto(rl.pareja1) && normalizarTexto(p.pareja1) === normalizarTexto(rl.pareja2))
+                                    );
+                                    if (idxD !== -1) {
+                                        partDrive[idxD] = rl;
+                                    } else {
+                                        partDrive.push(rl);
+                                    }
+                                });
                                 cache.partidos = partDrive;
                                 localStorage.setItem('partidos_registrados', JSON.stringify(cache.partidos));
                                 if (state.miPareja) {
@@ -1438,12 +1460,13 @@
                 pareja2: rival,
                 resultadoSets: resultadoSets,
                 ganador: nombreGanador,
-                grupo: state.miGrupo
+                grupo: state.miGrupo,
+                ts: Date.now()
             };
 
             const indiceExistente = cache.partidos.findIndex(p => 
-                (p.pareja1.toLowerCase() === state.miPareja.toLowerCase() && p.pareja2.toLowerCase() === rival.toLowerCase()) ||
-                (p.pareja2.toLowerCase() === state.miPareja.toLowerCase() && p.pareja1.toLowerCase() === rival.toLowerCase())
+                (normalizarTexto(p.pareja1) === normalizarTexto(state.miPareja) && normalizarTexto(p.pareja2) === normalizarTexto(rival)) ||
+                (normalizarTexto(p.pareja2) === normalizarTexto(state.miPareja) && normalizarTexto(p.pareja1) === normalizarTexto(rival))
             );
 
             if (indiceExistente !== -1) {
@@ -1457,7 +1480,12 @@
 
         function ejecutarGuardadoResultado(partidoObj, esModificacion) {
             if (esModificacion && partidoPendienteGuardar) {
-                cache.partidos[partidoPendienteGuardar.indiceExistente] = partidoObj;
+                // Eliminar cualquier duplicado previo entre estas mismas dos parejas y dejar únicamente el modificado
+                cache.partidos = cache.partidos.filter(p => !(
+                    (normalizarTexto(p.pareja1) === normalizarTexto(partidoObj.pareja1) && normalizarTexto(p.pareja2) === normalizarTexto(partidoObj.pareja2)) ||
+                    (normalizarTexto(p.pareja2) === normalizarTexto(partidoObj.pareja1) && normalizarTexto(p.pareja1) === normalizarTexto(partidoObj.pareja2))
+                ));
+                cache.partidos.push(partidoObj);
                 recalcularTodaLaClasificacion();
             } else {
                 cache.partidos.push(partidoObj);
