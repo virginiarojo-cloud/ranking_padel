@@ -1,66 +1,216 @@
-<!-- Actualización de la lógica de guardado y carga de disponibilidad -->
-<script>
-// Función robusta para guardar la disponibilidad en la caché y sincronizar con Google Sheets / Apps Script
-async function guardarDisponibilidad() {
-    const parejaActual = cache.parejaActual;
-    if (!parejaActual) {
-        alert("Por favor, selecciona una pareja primero.");
-        return;
-    }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking Pádel App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { background-color: #0b0f19; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
 
-    // Recoger fechas y franjas seleccionadas en la interfaz
-    const checkboxes = document.querySelectorAll('.disp-checkbox:checked');
-    const nuevasDisponibilidades = [];
-    checkboxes.forEach(cb => {
-        nuevasDisponibilidades.push({
-            pareja: parejaActual,
-            fecha: cb.dataset.fecha,
-            franja: cb.dataset.franja
-        });
-    });
+    <!-- HEADER -->
+    <header class="bg-slate-900/80 backdrop-blur border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-50">
+        <div>
+            <h1 class="font-bold text-lg text-emerald-400">Ranking Pádel</h1>
+            <p id="info-ronda" class="text-xs text-slate-400">Cargando ronda activa...</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="badge-usuario" class="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full text-slate-300">--</span>
+            <button onclick="abrirModalAdminPIN()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition">⚙️</button>
+        </div>
+    </header>
 
-    // Guardar en la caché local para respuesta inmediata
-    if (!cache.disponibilidades) cache.disponibilidades = [];
-    // Filtrar las anteriores de esta pareja y añadir las nuevas
-    cache.disponibilidades = cache.disponibilidades.filter(d => d.pareja !== parejaActual);
-    cache.disponibilidades.push(...nuevasDisponibilidades);
-    localStorage.setItem('padel_disponibilidades', JSON.stringify(cache.disponibilidades));
+    <!-- PANTALLA DE IDENTIFICACIÓN -->
+    <div id="modal-identificacion" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h2 class="text-xl font-bold text-white mb-2">Bienvenida</h2>
+            <p class="text-sm text-slate-400 mb-6">Selecciona tu grupo y pareja para entrar</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Elige grupo</label>
+                    <select id="select-grupo" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500">
+                        <option value="">Cargando grupos...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Nuestra pareja</label>
+                    <select id="select-pareja" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500">
+                        <option value="">Primero selecciona un grupo</option>
+                    </select>
+                </div>
+                <button onclick="guardarSeleccionPareja()" class="w-full mt-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-emerald-500/20">
+                    Entrar a la App
+                </button>
+            </div>
+        </div>
+    </div>
 
-    // Si existe URL de Apps Script configurada para escritura, enviar los datos
-    if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
-        try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    accion: 'guardarDisponibilidad',
-                    pareja: parejaActual,
-                    disponibilidades: nuevasDisponibilidades
-                })
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 space-y-6">
+        <!-- SECCIÓN TABLÓN / DISPONIBILIDAD -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5">
+            <h3 class="font-bold text-white mb-4 flex items-center gap-2">
+                <span>📅</span> Nuestra Disponibilidad y Tablón de Coincidencias
+            </h3>
+            <div id="contenedor-tablon" class="space-y-3">
+                <p class="text-sm text-slate-400">Selecciona tu disponibilidad para ver los matches en el tablón.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL ADMIN PIN -->
+    <div id="modal-admin-pin" class="hidden fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xs w-full p-5 text-center">
+            <h3 class="font-bold text-white mb-3">Acceso Administradora</h3>
+            <input type="password" id="input-admin-pin" placeholder="PIN (1234)" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-center text-white mb-4">
+            <div class="flex gap-2">
+                <button onclick="cerrarModalAdminPIN()" class="flex-1 bg-slate-800 py-2.5 rounded-xl text-slate-300">Cancelar</button>
+                <button onclick="procesarPinAdmin()" class="flex-1 bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl">Entrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE CARGA Y LÓGICA -->
+    <script>
+        const SHEET_ID = '1dazl73BAaUMa_RNFH_Ovh_ZjSMu1i71we47xOfxHU';
+        let cache = {
+            gruposParejas: {},
+            parejaActual: localStorage.getItem('padel_pareja_actual') || '',
+            grupoActual: localStorage.getItem('padel_grupo_actual') || '',
+            disponibilidades: JSON.parse(localStorage.getItem('padel_disponibilidades') || '[]'),
+            cerrados: JSON.parse(localStorage.getItem('padel_cerrados') || '[]')
+        };
+
+        window.onload = function() {
+            cargarFechasRondaActiva();
+            cargarDatosDesdeParejas();
+        };
+
+        async function cargarFechasRondaActiva() {
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Rondas&tqx=out:json`;
+                const res = await fetch(url);
+                const text = await res.text();
+                const json = JSON.parse(text.substring(47).slice(0, -2));
+                const rows = json.table.rows;
+                
+                let rondaTexto = "Ronda Activa";
+                rows.forEach(r => {
+                    const inicio = r.c[3] ? r.c[3].v : '';
+                    const fin = r.c[4] ? r.c[4].v : '';
+                    const estado = r.c[5] ? String(r.c[5].v).trim().toUpperCase() : '';
+                    if (estado === 'ACTIVA' || estado === 'EN CURSO') {
+                        rondaTexto = `Ronda Activa: ${inicio} al ${fin}`;
+                    }
+                });
+                document.getElementById('info-ronda').innerText = rondaTexto;
+            } catch (e) {
+                document.getElementById('info-ronda').innerText = "Ronda en curso";
+            }
+        }
+
+        async function cargarDatosDesdeParejas() {
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=Parejas&tqx=out:json`;
+                const res = await fetch(url);
+                const text = await res.text();
+                const json = JSON.parse(text.substring(47).slice(0, -2));
+                const rows = json.table.rows;
+
+                cache.gruposParejas = {};
+                rows.forEach(r => {
+                    const pareja = r.c[3] ? r.c[3].v : null; // Columna D
+                    const grupo = r.c[5] ? r.c[5].v : null;  // Columna F
+                    if (pareja && grupo && pareja !== '#N/A' && grupo !== '#N/A') {
+                        const gClean = String(grupo).trim();
+                        const pClean = String(pareja).trim();
+                        if (!cache.gruposParejas[gClean]) cache.gruposParejas[gClean] = [];
+                        cache.gruposParejas[gClean].push(pClean);
+                    }
+                });
+
+                poblarSelectores();
+            } catch (e) {
+                console.error("Error al cargar desde la pestaña Parejas:", e);
+                // Fallback seguro si hay restricciones de red
+                cache.gruposParejas = { "GRUPO B": ["Esther/Lola"], "GRUPO C": ["Ana/Olga", "Angeles/Raquel"] };
+                poblarSelectores();
+            }
+        }
+
+        function poblarSelectores() {
+            const selectGrupo = document.getElementById('select-grupo');
+            selectGrupo.innerHTML = '<option value="">Selecciona tu grupo</option>';
+            
+            Object.keys(cache.gruposParejas).forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g;
+                opt.textContent = g;
+                if (g === cache.grupoActual) opt.selected = true;
+                selectGrupo.appendChild(opt);
             });
-        } catch (e) {
-            console.warn("Aviso: No se pudo sincronizar automáticamente con Google Apps Script, guardado localmente.", e);
-        }
-    }
 
-    alert("¡Nuestra disponibilidad ha sido guardada correctamente!");
-    renderizarTodo();
-}
+            selectGrupo.onchange = function() {
+                actualizarSelectParejas(this.value);
+            };
 
-// Carga robusta de la pestaña Disponibilidad del fichero
-async function cargarDisponibilidadesDesdeDrive() {
-    try {
-        // Intentar leer desde el almacenamiento local o Google Sheets (pestaña Disponibilidad, gid correspondiente)
-        const localData = localStorage.getItem('padel_disponibilidades');
-        if (localData) {
-            cache.disponibilidades = JSON.parse(localData);
-        } else {
-            cache.disponibilidades = [];
+            if (cache.grupoActual) {
+                selectGrupo.value = cache.grupoActual;
+                actualizarSelectParejas(cache.grupoActual, cache.parejaActual);
+            }
         }
-    } catch (e) {
-        console.error("Error al cargar disponibilidades:", e);
-        cache.disponibilidades = [];
-    }
-}
-</script>
+
+        function actualizarSelectParejas(grupo, seleccionada = '') {
+            const selectPareja = document.getElementById('select-pareja');
+            selectPareja.innerHTML = '<option value="">Selecciona nuestra pareja</option>';
+            
+            if (cache.gruposParejas[grupo]) {
+                cache.gruposParejas[grupo].forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = p;
+                    if (p === seleccionada) opt.selected = true;
+                    selectPareja.appendChild(opt);
+                });
+            }
+        }
+
+        function guardarSeleccionPareja() {
+            const g = document.getElementById('select-grupo').value;
+            const p = document.getElementById('select-pareja').value;
+            if (!g || !p) {
+                alert("Por favor, selecciona tanto el grupo como nuestra pareja.");
+                return;
+            }
+            cache.grupoActual = g;
+            cache.parejaActual = p;
+            localStorage.setItem('padel_grupo_actual', g);
+            localStorage.setItem('padel_pareja_actual', p);
+
+            document.getElementById('badge-usuario').innerText = `${g} | ${p}`;
+            document.getElementById('modal-identificacion').classList.add('hidden');
+            renderizarTablon();
+        }
+
+        function renderizarTablon() {
+            const container = document.getElementById('contenedor-tablon');
+            container.innerHTML = `<p class="text-sm text-slate-300">Conectado como <strong>${cache.parejaActual}</strong> (${cache.grupoActual}). Configura tu disponibilidad o revisa las coincidencias.</p>`;
+        }
+
+        function abrirModalAdminPIN() { document.getElementById('modal-admin-pin').classList.remove('hidden'); }
+        function cerrarModalAdminPIN() { document.getElementById('modal-admin-pin').classList.add('hidden'); }
+        function procesarPinAdmin() {
+            if (document.getElementById('input-admin-pin').value === '1234') {
+                alert("Modo Administradora desbloqueado.");
+                cerrarModalAdminPIN();
+            } else {
+                alert("PIN incorrecto.");
+            }
+        }
+    </script>
+</body>
+</html>
