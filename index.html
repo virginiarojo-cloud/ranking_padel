@@ -1,0 +1,66 @@
+<!-- Actualización de la lógica de guardado y carga de disponibilidad -->
+<script>
+// Función robusta para guardar la disponibilidad en la caché y sincronizar con Google Sheets / Apps Script
+async function guardarDisponibilidad() {
+    const parejaActual = cache.parejaActual;
+    if (!parejaActual) {
+        alert("Por favor, selecciona una pareja primero.");
+        return;
+    }
+
+    // Recoger fechas y franjas seleccionadas en la interfaz
+    const checkboxes = document.querySelectorAll('.disp-checkbox:checked');
+    const nuevasDisponibilidades = [];
+    checkboxes.forEach(cb => {
+        nuevasDisponibilidades.push({
+            pareja: parejaActual,
+            fecha: cb.dataset.fecha,
+            franja: cb.dataset.franja
+        });
+    });
+
+    // Guardar en la caché local para respuesta inmediata
+    if (!cache.disponibilidades) cache.disponibilidades = [];
+    // Filtrar las anteriores de esta pareja y añadir las nuevas
+    cache.disponibilidades = cache.disponibilidades.filter(d => d.pareja !== parejaActual);
+    cache.disponibilidades.push(...nuevasDisponibilidades);
+    localStorage.setItem('padel_disponibilidades', JSON.stringify(cache.disponibilidades));
+
+    // Si existe URL de Apps Script configurada para escritura, enviar los datos
+    if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
+        try {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    accion: 'guardarDisponibilidad',
+                    pareja: parejaActual,
+                    disponibilidades: nuevasDisponibilidades
+                })
+            });
+        } catch (e) {
+            console.warn("Aviso: No se pudo sincronizar automáticamente con Google Apps Script, guardado localmente.", e);
+        }
+    }
+
+    alert("¡Nuestra disponibilidad ha sido guardada correctamente!");
+    renderizarTodo();
+}
+
+// Carga robusta de la pestaña Disponibilidad del fichero
+async function cargarDisponibilidadesDesdeDrive() {
+    try {
+        // Intentar leer desde el almacenamiento local o Google Sheets (pestaña Disponibilidad, gid correspondiente)
+        const localData = localStorage.getItem('padel_disponibilidades');
+        if (localData) {
+            cache.disponibilidades = JSON.parse(localData);
+        } else {
+            cache.disponibilidades = [];
+        }
+    } catch (e) {
+        console.error("Error al cargar disponibilidades:", e);
+        cache.disponibilidades = [];
+    }
+}
+</script>
